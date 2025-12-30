@@ -4,6 +4,12 @@ from time import perf_counter
 from tqdm import tqdm
 from gemm.gemm_naive import gemm_naive, prepare_naive
 from gemm.gemm_numpy import gemm_numpy, prepare_numpy
+from gemm.loop_order.gemm_kmn import gemm_kmn
+from gemm.loop_order.gemm_knm import gemm_knm   
+from gemm.loop_order.gemm_mkn import gemm_mkn
+from gemm.loop_order.gemm_mnk import gemm_mnk
+from gemm.loop_order.gemm_nkm import gemm_nkm
+from gemm.loop_order.gemm_nmk import gemm_nmk 
 from dataclasses import dataclass
 import sqlite3
 from collections.abc import Callable
@@ -30,12 +36,22 @@ def main():
     conn = sqlite3.connect("benchmarks.db")
 
 
-    sizes = [128, 256, 512, 1024]
+    sizes = [128, 256, 512,]
+    # sizes = [1024]
+    # sizes = [2048, 4096, 8192]
 
     warmup = 1
-    trials = 10
-    # GEMM('naive_py', gemm_naive, prepare_naive)
+    trials = 3
+    # versions = [GEMM('naive_py', gemm_naive, prepare_naive)]
     versions = [GEMM('numpy', gemm_numpy, prepare_numpy)]
+    # versions = [
+    #     GEMM('loop_kmn', gemm_kmn, prepare_naive),
+    #     GEMM('loop_knm', gemm_knm, prepare_naive),
+    #     GEMM('loop_mkn', gemm_mkn, prepare_naive),
+    #     GEMM('loop_mnk', gemm_mnk, prepare_naive),
+    #     GEMM('loop_nkm', gemm_nkm, prepare_naive),
+    #     GEMM('loop_nmk', gemm_nmk, prepare_naive),
+    #     ]
 
     runs = []
 
