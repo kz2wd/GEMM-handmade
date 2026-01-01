@@ -2,15 +2,16 @@ import numpy as np
 import pandas as pd
 from time import perf_counter
 from tqdm import tqdm
-from gemm.gemm_naive import gemm_naive, prepare_naive
-from gemm.gemm_numpy import gemm_numpy, prepare_numpy
-from gemm.loop_order.gemm_kmn import gemm_kmn
-from gemm.loop_order.gemm_knm import gemm_knm   
-from gemm.loop_order.gemm_mkn import gemm_mkn
-from gemm.loop_order.gemm_mnk import gemm_mnk
-from gemm.loop_order.gemm_nkm import gemm_nkm
-from gemm.loop_order.gemm_nmk import gemm_nmk
-from gemm.gemm_continuous import gemm_continuous, prepare_continuous
+from gemm_py.gemm_naive import gemm_naive, prepare_naive
+from gemm_py.gemm_numpy import gemm_numpy, prepare_numpy
+from gemm_py.loop_order.gemm_kmn import gemm_kmn
+from gemm_py.loop_order.gemm_knm import gemm_knm   
+from gemm_py.loop_order.gemm_mkn import gemm_mkn
+from gemm_py.loop_order.gemm_mnk import gemm_mnk
+from gemm_py.loop_order.gemm_nkm import gemm_nkm
+from gemm_py.loop_order.gemm_nmk import gemm_nmk
+from gemm_py.gemm_continuous import gemm_continuous, prepare_continuous
+from check import check
 from dataclasses import dataclass
 import sqlite3
 from collections.abc import Callable
@@ -32,6 +33,15 @@ def benchmark(version: GEMM, M, N, K):
     return t2 - t1
 
 
+epsilon = 1e-6
+def check_versions():
+    version = GEMM('naive_py', gemm_naive, prepare_naive)
+    error = check(version)
+    if error > epsilon:
+        print(f'Version [{version.name}] failed with an error of {error:.5f}')
+    else:
+        print(f'Version [{version.name}] performed correctly')
+
 
 def main():
     conn = sqlite3.connect("benchmarks.db")
@@ -44,7 +54,7 @@ def main():
     warmup = 1
     trials = 3
     # versions = [GEMM('naive_py', gemm_naive, prepare_naive)]
-    # versions = [GEMM('numpy', gemm_numpy, prepare_numpy)]
+    versions = [GEMM('numpy', gemm_numpy, prepare_numpy)]
     # versions = [
     #     GEMM('loop_kmn', gemm_kmn, prepare_naive),
     #     GEMM('loop_knm', gemm_knm, prepare_naive),
@@ -53,7 +63,7 @@ def main():
     #     GEMM('loop_nkm', gemm_nkm, prepare_naive),
     #     GEMM('loop_nmk', gemm_nmk, prepare_naive),
     #     ]
-    versions = [GEMM('continuous_memory', gemm_continuous, prepare_continuous)]
+    # versions = [GEMM('continuous_memory', gemm_continuous, prepare_continuous)]
 
     runs = []
 
@@ -75,5 +85,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    check_versions()
+    # main()
     

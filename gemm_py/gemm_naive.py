@@ -9,8 +9,6 @@ Docstring for gemm
      BB
 M AA CC
   AA CC
-
-
 """
 def gemm_naive(A, B, C, M, N, K):
     for m in range(M):
@@ -20,9 +18,13 @@ def gemm_naive(A, B, C, M, N, K):
     return C
 
 
-def prepare_naive(M, N, K):
-    A = [[random.random() for _ in range(K)] for _ in range(M)]
-    B = [[random.random() for _ in range(N)] for _ in range(K)]
+def random_gen(i, j):
+    return random.random()
+
+
+def prepare_naive(M, N, K, init_a=random_gen, init_b=random_gen):
+    A = [[init_a(i, j) for j in range(K)] for i in range(M)]
+    B = [[init_b(i, j) for j in range(N)] for i in range(K)]
     C = [[0 for _ in range(N)] for _ in range(K)]
     return A, B, C
 

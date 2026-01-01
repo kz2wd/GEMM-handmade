@@ -25,3 +25,5 @@ def prepare_continuous(M, N, K):
     C = [0 for _ in range(K * K)]
     return A, B, C
 
+
+
