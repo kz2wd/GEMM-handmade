@@ -1,4 +1,6 @@
+import numpy as np
 import random
+from utils import *
 
 
 """
@@ -18,8 +20,6 @@ def gemm_naive(A, B, C, M, N, K):
     return C
 
 
-def random_gen(i, j):
-    return random.random()
 
 
 def prepare_naive(M, N, K, init_a=random_gen, init_b=random_gen):
@@ -28,3 +28,16 @@ def prepare_naive(M, N, K, init_a=random_gen, init_b=random_gen):
     C = [[0 for _ in range(N)] for _ in range(K)]
     return A, B, C
 
+
+CHECK_SIZE = 256
+
+def check_naive(version):
+    A = get_mat(determinist_location_gen, CHECK_SIZE, CHECK_SIZE)
+    B = get_mat(determinist_location_gen, CHECK_SIZE, CHECK_SIZE)
+    truth = A @ B
+
+    A, B, C = version.prepare(CHECK_SIZE, CHECK_SIZE, CHECK_SIZE, determinist_location_gen, determinist_location_gen)
+    C = version.run(A, B, C, CHECK_SIZE, CHECK_SIZE, CHECK_SIZE)
+    
+    
+    return (C - truth).sum() 

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from time import perf_counter
 from tqdm import tqdm
-from gemm_py.gemm_naive import gemm_naive, prepare_naive
+from gemm_py.gemm_naive import gemm_naive, prepare_naive, check_naive
 from gemm_py.gemm_numpy import gemm_numpy, prepare_numpy
 from gemm_py.loop_order.gemm_kmn import gemm_kmn
 from gemm_py.loop_order.gemm_knm import gemm_knm   
@@ -11,7 +11,7 @@ from gemm_py.loop_order.gemm_mnk import gemm_mnk
 from gemm_py.loop_order.gemm_nkm import gemm_nkm
 from gemm_py.loop_order.gemm_nmk import gemm_nmk
 from gemm_py.gemm_continuous import gemm_continuous, prepare_continuous
-from check import check
+from gemm_py.gemm_numpy_naive import numpy_naive
 from dataclasses import dataclass
 import sqlite3
 from collections.abc import Callable
@@ -35,8 +35,9 @@ def benchmark(version: GEMM, M, N, K):
 
 epsilon = 1e-6
 def check_versions():
-    version = GEMM('naive_py', gemm_naive, prepare_naive)
-    error = check(version)
+    # version = GEMM('naive_py', gemm_naive, prepare_naive)
+    version = GEMM('numpy_naive', numpy_naive, prepare_numpy)
+    error = check_naive(version)
     if error > epsilon:
         print(f'Version [{version.name}] failed with an error of {error:.5f}')
     else:
@@ -52,9 +53,9 @@ def main():
     # sizes = [2048, 4096, 8192]
 
     warmup = 1
-    trials = 3
+    trials = 5
     # versions = [GEMM('naive_py', gemm_naive, prepare_naive)]
-    versions = [GEMM('numpy', gemm_numpy, prepare_numpy)]
+    # versions = [GEMM('numpy', gemm_numpy, prepare_numpy)
     # versions = [
     #     GEMM('loop_kmn', gemm_kmn, prepare_naive),
     #     GEMM('loop_knm', gemm_knm, prepare_naive),
@@ -64,6 +65,7 @@ def main():
     #     GEMM('loop_nmk', gemm_nmk, prepare_naive),
     #     ]
     # versions = [GEMM('continuous_memory', gemm_continuous, prepare_continuous)]
+    versions = [GEMM('numpy_naive', numpy_naive, prepare_numpy)]
 
     runs = []
 
