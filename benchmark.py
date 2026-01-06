@@ -12,6 +12,7 @@ from gemm_py.loop_order.gemm_nkm import gemm_nkm
 from gemm_py.loop_order.gemm_nmk import gemm_nmk
 from gemm_py.gemm_continuous import gemm_continuous, prepare_continuous
 from gemm_py.gemm_numpy_naive import numpy_naive
+from gemm_py.gemm_unrolled import gemm_unrolled2, gemm_unrolled4, gemm_unrolled8, gemm_unrolled16, gemm_unrolled32
 from dataclasses import dataclass
 import sqlite3
 from collections.abc import Callable
@@ -33,10 +34,14 @@ def benchmark(version: GEMM, M, N, K):
     return t2 - t1
 
 
-epsilon = 1e-6
 def check_versions():
     # version = GEMM('naive_py', gemm_naive, prepare_naive)
     version = GEMM('numpy_naive', numpy_naive, prepare_numpy)
+    _check_version(version)
+
+
+epsilon = 1e-6
+def _check_version(version):
     error = check_naive(version)
     if error > epsilon:
         print(f'Version [{version.name}] failed with an error of {error:.5f}')
@@ -55,7 +60,7 @@ def main():
     warmup = 1
     trials = 5
     # versions = [GEMM('naive_py', gemm_naive, prepare_naive)]
-    # versions = [GEMM('numpy', gemm_numpy, prepare_numpy)
+    versions = [GEMM('numpy', gemm_numpy, prepare_numpy)]
     # versions = [
     #     GEMM('loop_kmn', gemm_kmn, prepare_naive),
     #     GEMM('loop_knm', gemm_knm, prepare_naive),
@@ -65,11 +70,16 @@ def main():
     #     GEMM('loop_nmk', gemm_nmk, prepare_naive),
     #     ]
     # versions = [GEMM('continuous_memory', gemm_continuous, prepare_continuous)]
-    versions = [GEMM('numpy_naive', numpy_naive, prepare_numpy)]
-
+    # versions = [GEMM('numpy_naive', numpy_naive, prepare_numpy)]
+    # versions = [GEMM('unrolled2_py', gemm_unrolled2, prepare_naive), 
+    #             GEMM('unrolled4_py', gemm_unrolled4, prepare_naive),
+    #             GEMM('unrolled8_py', gemm_unrolled8, prepare_naive)]
+    versions = [GEMM('unrolled16_py', gemm_unrolled16, prepare_naive), 
+                GEMM('unrolled32_py', gemm_unrolled32, prepare_naive),]
     runs = []
 
     for version in versions:
+        _check_version(version)
         for S in sizes:
             N, M, K = S, S, S
             
@@ -87,6 +97,5 @@ def main():
 
 
 if __name__ == "__main__":
-    check_versions()
-    # main()
+    main()
     

@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.28)
+project(cgemm)
 
 find_package(Python REQUIRED COMPONENTS Development)
 add_library(cgemm MODULE

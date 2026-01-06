@@ -9,7 +9,7 @@ static PyObject*
 cgemm_naive(PyObject* self, PyObject* args) {
     double* A;
     double* B;
-    double* C; 
+    double* C;
     size_t K;
 
     if (!PyArg_ParseTuple(args, "ii", &a, &b)) return NULL;
