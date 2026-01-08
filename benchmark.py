@@ -13,6 +13,7 @@ from gemm_py.loop_order.gemm_nmk import gemm_nmk
 from gemm_py.gemm_continuous import gemm_continuous, prepare_continuous
 from gemm_py.gemm_numpy_naive import numpy_naive
 from gemm_py.gemm_unrolled import gemm_unrolled2, gemm_unrolled4, gemm_unrolled8, gemm_unrolled16, gemm_unrolled32
+
 from dataclasses import dataclass
 import sqlite3
 from collections.abc import Callable
@@ -95,7 +96,55 @@ def main():
     df = pd.DataFrame(runs)
     df.to_sql("benchmarks", conn, if_exists="append", index=False)
 
+import sys
+from pathlib import Path
+sys.path.append("cgemm/build")
+import cgemm
+
+@dataclass
+class CGEMM:
+    name: str
+    run: Callable
+    prepare: Callable
+
+
+
+def cbenchmark(version: CGEMM, K):
+    cgemm_args = version.prepare(K)
+
+    t1 = perf_counter()
+    version.run(cgemm_args)
+    t2 = perf_counter()
+
+    return t2 - t1
+
+
+
+def cmain():
+
+    conn = sqlite3.connect("benchmarks.db")
+    warmup = 1
+    trials = 5
+    sizes = [512, 1024]
+    versions = [CGEMM("naive_c", cgemm.naive_compute, cgemm.naive_prepare)]
+    runs = []
+
+    for version in versions:
+        for K in sizes:
+            
+            for _ in range(warmup):
+                cbenchmark(version, K)
+    
+            for i in (pbar := tqdm(range(trials))):
+                pbar.set_description(f"Processing {version.name}:{K}")
+                
+                runs.append({'version': version.name, 'time': cbenchmark(version, K), 'size': K} ) 
+    
+    df = pd.DataFrame(runs)
+    df.to_sql("benchmarks", conn, if_exists="append", index=False)
 
 if __name__ == "__main__":
-    main()
+    # main()
+    print(dir(cgemm))
+    cmain()
     

@@ -1,31 +1,112 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+
 #include "cgemm_naive.h"
 
-#define at(M, i, j) (M[i + K * j]) 
+#include "cgemm_args.h"
 
-static PyObject*
-cgemm_naive(PyObject* self, PyObject* args) {
-    double* A;
-    double* B;
-    double* C;
-    size_t K;
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
 
-    if (!PyArg_ParseTuple(args, "ii", &a, &b)) return NULL;
+// i is row, j is column
+// Beware of indexes order
+#define at(M, i, j) (M[(K) * (i) + (j)]) 
 
-    for (int k = 0; k < K; ++k) {
-        for (int m = 0; m < K; ++m) {
-            for (int n = 0; n < K; ++n) {
-                at(C, m, n) += at(A, m, k) * at(B, k, n);
-            }
+
+void init_mat(double* M, size_t K) {
+ 
+    double x = RAND_MAX / 100.0;
+    for (size_t m = 0; m < K; ++m) {
+        for (size_t n = 0; n < K; ++n) {
+            at(M, m, n) = rand() / x;
         }
     }
 }
 
- 
-py_add(PyObject* self, PyObject* args){
-    int a, b;
-    if (!PyArg_ParseTuple(args, "ii", &a, &b)) return NULL;
-    return PyLong_FromLong(a + b);
+PyObject* naive_prepare(PyObject* self, PyObject* args) {
+    size_t K;
+    if (!PyArg_ParseTuple(args, "n", &K)) return NULL;
+
+    PyGEMMArgs *gemm_args;
+    gemm_args = (PyGEMMArgs *) PyGEMMArgsType.tp_alloc(&PyGEMMArgsType, 0);
+
+    gemm_args->A = (double *) malloc(sizeof(double) * K * K);
+    gemm_args->B = (double *) malloc(sizeof(double) * K * K);
+    gemm_args->C = (double *) calloc(K * K, sizeof(double));
+    gemm_args->K = K;
+
+    init_mat(gemm_args->A, K);
+    init_mat(gemm_args->B, K);
+
+    return (PyObject *)gemm_args;
+}   
+
+
+PyObject* naive_compute(PyObject* self, PyObject* args) {
+    
+    PyGEMMArgs* gemm_args;
+    
+    if (!PyArg_ParseTuple(args, "O!", &PyGEMMArgsType, &gemm_args)) return NULL;
+    
+    double* A = gemm_args->A;
+    double* B = gemm_args->B;
+    double* C = gemm_args->C;
+    size_t K = gemm_args->K;
+
+
+    for (size_t k = 0; k < K; ++k) {
+        for (size_t m = 0; m < K; ++m) {
+            for (size_t n = 0; n < K; ++n) {
+                at(C, m, n) += at(A, m, k) * at(B, k, n);
+            }
+        }
+    }
+    Py_INCREF(Py_None);
+    return Py_None;
 }
+
+
+void print_mat(double* M, size_t K) {
+    for (size_t m = 0; m < K; ++m) {
+        for (size_t n = 0; n < K; ++n) {
+            printf("%f ", at(M, m, n));
+        }
+    printf("\n");
+    }
+}
+
+PyObject* naive_debug_print(PyObject* self, PyObject* args) {
+    PyGEMMArgs* gemm_args;
+    
+    if (!PyArg_ParseTuple(args, "O!", &PyGEMMArgsType, &gemm_args)) return NULL;
+    
+    double* A = gemm_args->A;
+    double* B = gemm_args->B;
+    double* C = gemm_args->C;
+    size_t K = gemm_args->K;
+
+    if (K > 64) {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
+    printf("A:\n");
+    print_mat(A, K);
+    printf("\n\n");
+
+    printf("B:\n");
+    print_mat(B, K);
+    printf("\n\n");
+
+    printf("C:\n");
+    print_mat(C, K);
+    printf("\n\n");
+
+    Py_INCREF(Py_None);
+    return Py_None;
+    
+}
+
+

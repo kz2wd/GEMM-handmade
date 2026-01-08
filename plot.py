@@ -8,7 +8,7 @@ if __name__ == "__main__":
     
     conn = sqlite3.connect("benchmarks.db")
     versions_to_plot = []
-    versions_to_plot = ["numpy", "unrolled4_py", 'unrolled8_py', 'unrolled16_py', 'unrolled32_py']
+    versions_to_plot = ["numpy", 'naive_c', 'unrolled32_py']
 
     if not versions_to_plot:
         df = pd.read_sql_query("SELECT * FROM benchmarks", conn)

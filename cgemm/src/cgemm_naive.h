@@ -6,8 +6,10 @@
 
 #include <stdlib.h>
 
+PyObject* naive_prepare(PyObject* self, PyObject* args);
 
-static PyObject* cgemm_naive(double* A, double* B, double* C, size_t K);
+PyObject* naive_compute(PyObject* self, PyObject* args);
+
+PyObject* naive_debug_print(PyObject* self, PyObject* args);
 
 #endif
-
