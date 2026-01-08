@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(cgemm)
+project(cgemm LANGUAGES C CUDA)
 
 # set(CMAKE_BUILD_TYPE Debug)
 
@@ -8,7 +8,11 @@ add_library(cgemm MODULE
     src/cgemm.c
     src/cgemm_naive.c
     src/cgemm_args.c
+    src/cugemm_naive.cu
 )
 
 target_link_libraries(cgemm PRIVATE Python::Python)
-set_target_properties(cgemm PROPERTIES PREFIX "")
+set_target_properties(cgemm PROPERTIES 
+    PREFIX ""
+    CUDA_SEPARABLE_COMPILATION ON
+)

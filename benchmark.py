@@ -125,8 +125,11 @@ def cmain():
     conn = sqlite3.connect("benchmarks.db")
     warmup = 1
     trials = 5
-    sizes = [512, 1024]
-    versions = [CGEMM("naive_c", cgemm.naive_compute, cgemm.naive_prepare)]
+    # sizes = [512, 1024]
+    # sizes = [128]
+    # sizes = [2048]
+    # versions = [CGEMM("naive_c", cgemm.naive_compute, cgemm.naive_prepare)]
+    versions = [CGEMM("naive_cu", cgemm.cu_naive_compute, cgemm.naive_prepare)]
     runs = []
 
     for version in versions:

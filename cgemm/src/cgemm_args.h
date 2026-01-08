@@ -17,4 +17,9 @@ void PyGEMMArgs_dealloc(PyObject* o);
 // define type https://docs.python.org/3/extending/newtypes_tutorial.html
 extern PyTypeObject PyGEMMArgsType;
 
+
+// i is row, j is column
+// Beware of indexes order
+#define at(M, i, j) (M[(K) * (i) + (j)]) 
+
 #endif // CGEMM_ARGS
