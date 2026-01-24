@@ -146,8 +146,31 @@ def cmain():
     df = pd.DataFrame(runs)
     df.to_sql("benchmarks", conn, if_exists="append", index=False)
 
+def check_c():
+    epsilon = 1e-6
+    K = 64
+    # version = CGEMM("naive_c", cgemm.naive_compute, cgemm.naive_prepare)
+    version = CGEMM("naive_cu", cgemm.cu_naive_compute, cgemm.naive_prepare)
+    cgemm_args = version.prepare(K)
+    version.run(cgemm_args)
+    A = np.zeros((K, K))
+    B = np.zeros((K, K))
+    for i in range(K):
+        for j in range(K):
+            A[i, j] = cgemm.get_naive(cgemm_args, 0, i, j)
+            B[i, j] = cgemm.get_naive(cgemm_args, 1, i, j)
+    C = A @ B
+    error = 0
+    for i in range(K):
+        for j in range(K):
+            error += C[i, j] - cgemm.get_naive(cgemm_args, 2, i, j)
+    if error > epsilon:
+        print(f"ERROR IN VERSION [{version.name}]")
+    else:
+        print(f"VERSION [{version.name}] OK")
+
 if __name__ == "__main__":
     # main()
-    print(dir(cgemm))
-    cmain()
+    # cmain()
+    check_c()
     

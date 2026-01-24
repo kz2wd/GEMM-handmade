@@ -32,6 +32,7 @@ Methods[] = {
     {"naive_prepare", naive_prepare, METH_VARARGS, "naive cgemm preparation"},
     {"naive_debug_print", naive_debug_print, METH_VARARGS, "naive cgemm print for debug (K <= 64)"},
     {"cu_naive_compute", cu_naive_compute, METH_VARARGS, "naive cugemm run"},
+    {"get_naive", get_naive, METH_VARARGS, "getter on naive layout"},
     {NULL, NULL, 0, NULL}
 };
 

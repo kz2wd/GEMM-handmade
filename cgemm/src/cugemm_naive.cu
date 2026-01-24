@@ -59,7 +59,7 @@ PyObject* cu_naive_compute(PyObject* self, PyObject* args) {
 
     cudaDeviceSynchronize();
 
-    cudaMemcpy((void*) d_C, (void*) C, matrix_data_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy((void*) C, (void*) d_C, matrix_data_size, cudaMemcpyDeviceToHost);
 
     cudaFree((void*) d_A);
     cudaFree((void*) d_B);

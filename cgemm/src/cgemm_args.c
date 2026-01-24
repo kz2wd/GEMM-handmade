@@ -21,3 +21,22 @@ void PyGEMMArgs_dealloc(PyObject* o){
     Py_TYPE(self)->tp_free(self);
 }
 
+
+PyObject* get_naive(PyObject* self, PyObject* args) {
+
+    PyGEMMArgs* gemm_args;
+    int matrix_index; 
+    int i;
+    int j;
+    
+    if (!PyArg_ParseTuple(args, "O!iii", &PyGEMMArgsType, &gemm_args, &matrix_index, &i, &j)) return NULL;
+
+    double* target = gemm_args->A;
+    if (matrix_index == 1){
+        target = gemm_args->B;
+    } else if (matrix_index == 2) {
+        target = gemm_args->C;
+    }
+    int K = gemm_args->K;
+    return PyFloat_FromDouble(at(target, i, j));
+}

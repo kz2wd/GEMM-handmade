@@ -18,6 +18,8 @@ void PyGEMMArgs_dealloc(PyObject* o);
 extern PyTypeObject PyGEMMArgsType;
 
 
+PyObject* get_naive(PyObject* self, PyObject* args);
+
 // i is row, j is column
 // Beware of indexes order
 #define at(M, i, j) (M[(K) * (i) + (j)]) 
