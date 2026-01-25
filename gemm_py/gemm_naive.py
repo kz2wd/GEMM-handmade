@@ -36,7 +36,7 @@ def check_naive(version):
     B = get_mat(determinist_location_gen, CHECK_SIZE, CHECK_SIZE)
     truth = A @ B
 
-    A, B, C = version.prepare(CHECK_SIZE, CHECK_SIZE, CHECK_SIZE, determinist_location_gen, determinist_location_gen)
+    A, B, C = version.layout.prepare(CHECK_SIZE, CHECK_SIZE, CHECK_SIZE, determinist_location_gen, determinist_location_gen)
     C = version.run(A, B, C, CHECK_SIZE, CHECK_SIZE, CHECK_SIZE)
     
     

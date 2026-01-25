@@ -18,7 +18,7 @@ def gemm_numpy(A, B, C, M, N, K):
 
 
 def prepare_numpy(M, N, K, init_a=random_gen, init_b=random_gen):
-    A = get_mat(init_a, M, K)
-    B = get_mat(init_b, K, N)
+    A = get_mat(init_a, M, K).astype(np.double)
+    B = get_mat(init_b, K, N).astype(np.double)
     C = np.zeros((K, K))
     return A, B, C

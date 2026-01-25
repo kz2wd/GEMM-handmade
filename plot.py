@@ -4,12 +4,10 @@ import matplotlib
 import seaborn as sns
 import sqlite3
 
-if __name__ == "__main__":
-    
-    conn = sqlite3.connect("benchmarks.db")
-    versions_to_plot = []
-    versions_to_plot = ["numpy", 'naive_c', 'unrolled32_py']
 
+def fetch_df(versions_to_plot):
+    conn = sqlite3.connect("benchmarks.db")
+    
     if not versions_to_plot:
         df = pd.read_sql_query("SELECT * FROM benchmarks", conn)
     else:
@@ -17,9 +15,62 @@ if __name__ == "__main__":
         query = f"SELECT * FROM benchmarks WHERE version IN ({placeholder})"
         df = pd.read_sql_query(query, conn, params = versions_to_plot)
 
+    return df
 
-    sns.stripplot(data=df, y="time", x="size", hue="version", alpha=.25, legend=None)
-    sns.pointplot(data=df, y="time", x="size", hue="version", markers="d", linestyle="none", markersize=4, errorbar=None)
+
+# I have a i5-8600K / 3070ti
+# FLOPS = cores * frequency * FLOP per cycle
+# i5-8600K
+# FLOP per cycle : 2 * 256-bit FMA -> 16 FP64 / 32 FP32
+# per core : 4.3 GHz * 16 = 68.8 / 137.6 GFLOPS
+# total : 6 cores -> 412.8 / 825.6 GFLOPS
+#
+# 3070 ti https://www.techpowerup.com/gpu-specs/geforce-rtx-3070-ti.c3675
+# FP64 339.8 GFLOPS
+# FP32 21.75 TFLOPS 
+
+# GEMM FLOP -> 2K**3 - K**2 
+# FLOPS of run: GEMM FLOP / run time
+
+
+def plot_flops_global():
+    
+    versions_to_plot = []
+    # versions_to_plot = ["numpy", 'naive_c', 'unrolled32_py']
+    df = fetch_df(versions_to_plot)
+    df['GFLOPS'] = df.apply(lambda row: (2 * row['size'] ** 3 - row['size'] ** 2) / row['time'] * 1e-9, axis=1)
+    sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=.25, legend=None)
+    sns.pointplot(data=df, y="GFLOPS", x="size", hue="name", markers="d", linestyle="none", markersize=4, errorbar=None)
+    plt.title("Global GFLOPS")
     plt.show()
+
+
+def plot_flops_single_core():
+    
+    versions_to_plot = []
+    versions_to_plot = ["numpy", 'naive_c', 'unrolled32_py']
+    df = fetch_df(versions_to_plot)
+    df['GFLOPS'] = df.apply(lambda row: (2 * row['size'] ** 3 - row['size'] ** 2) / row['time'] * 1e-9, axis=1)
+    sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=.25, legend=None)
+    sns.pointplot(data=df, y="GFLOPS", x="size", hue="name", markers="d", linestyle="none", markersize=4, errorbar=None)
+    plt.title("Global GFLOPS")
+    plt.axhline(y=137.6)
+    plt.show()
+
+
+
+def plot_times():
+     
+    versions_to_plot = []
+    #versions_to_plot = ["numpy", 'naive_c', 'unrolled32_py']
+    df = fetch_df(versions_to_plot)
+    sns.stripplot(data=df, y="time", x="size", hue="name", alpha=.25, legend=None)
+    sns.pointplot(data=df, y="time", x="size", hue="name", markers="d", linestyle="none", markersize=4, errorbar=None)
+    plt.show()
+
+
+if __name__ == "__main__":
+#    plot_times()
+    plot_flops_single_core()
 
 

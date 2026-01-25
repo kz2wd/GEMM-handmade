@@ -1,176 +1,71 @@
-import numpy as np
-import pandas as pd
-from time import perf_counter
-from tqdm import tqdm
-from gemm_py.gemm_naive import gemm_naive, prepare_naive, check_naive
-from gemm_py.gemm_numpy import gemm_numpy, prepare_numpy
-from gemm_py.loop_order.gemm_kmn import gemm_kmn
-from gemm_py.loop_order.gemm_knm import gemm_knm   
-from gemm_py.loop_order.gemm_mkn import gemm_mkn
-from gemm_py.loop_order.gemm_mnk import gemm_mnk
-from gemm_py.loop_order.gemm_nkm import gemm_nkm
-from gemm_py.loop_order.gemm_nmk import gemm_nmk
-from gemm_py.gemm_continuous import gemm_continuous, prepare_continuous
-from gemm_py.gemm_numpy_naive import numpy_naive
-from gemm_py.gemm_unrolled import gemm_unrolled2, gemm_unrolled4, gemm_unrolled8, gemm_unrolled16, gemm_unrolled32
 
-from dataclasses import dataclass
 import sqlite3
-from collections.abc import Callable
+import pandas as pd
+from tqdm import tqdm
 
-@dataclass
-class GEMM:
-    name: str
-    run: Callable
-    prepare: Callable
-
-
-def benchmark(version: GEMM, M, N, K):
-    A, B, C = version.prepare(M, N, K)
-
-    t1 = perf_counter()
-    version.run(A, B, C, M, N, K)
-    t2 = perf_counter()
-
-    return t2 - t1
-
-
-def check_versions():
-    # version = GEMM('naive_py', gemm_naive, prepare_naive)
-    version = GEMM('numpy_naive', numpy_naive, prepare_numpy)
-    _check_version(version)
-
-
-epsilon = 1e-6
-def _check_version(version):
-    error = check_naive(version)
-    if error > epsilon:
-        print(f'Version [{version.name}] failed with an error of {error:.5f}')
-    else:
-        print(f'Version [{version.name}] performed correctly')
+from kernels import kernels, benchmark, check
 
 
 def main():
+
+    version_names = [
+     'numpy', 
+    #    'naive_py', 'numpy_naive',
+    #    'loop_kmn', 'loop_knm', 'loop_mkn', 'loop_mnk', 'loop_nkm', 'loop_nmk',
+    #    'continuous_memory',
+    #   'unrolled2_py','unrolled4_py',
+    #   'unrolled8_py', 'unrolled16_py', 'unrolled32_py', 
+    #   'naive_c', 
+    #   'naive_cu',
+    ]
+    
     conn = sqlite3.connect("benchmarks.db")
-
-
-    # sizes = [128, 256, 512]
-    sizes = [1024]
-    # sizes = [2048, 4096, 8192]
-
-    warmup = 1
-    trials = 5
-    # versions = [GEMM('naive_py', gemm_naive, prepare_naive)]
-    versions = [GEMM('numpy', gemm_numpy, prepare_numpy)]
-    # versions = [
-    #     GEMM('loop_kmn', gemm_kmn, prepare_naive),
-    #     GEMM('loop_knm', gemm_knm, prepare_naive),
-    #     GEMM('loop_mkn', gemm_mkn, prepare_naive),
-    #     GEMM('loop_mnk', gemm_mnk, prepare_naive),
-    #     GEMM('loop_nkm', gemm_nkm, prepare_naive),
-    #     GEMM('loop_nmk', gemm_nmk, prepare_naive),
-    #     ]
-    # versions = [GEMM('continuous_memory', gemm_continuous, prepare_continuous)]
-    # versions = [GEMM('numpy_naive', numpy_naive, prepare_numpy)]
-    # versions = [GEMM('unrolled2_py', gemm_unrolled2, prepare_naive), 
-    #             GEMM('unrolled4_py', gemm_unrolled4, prepare_naive),
-    #             GEMM('unrolled8_py', gemm_unrolled8, prepare_naive)]
-    versions = [GEMM('unrolled16_py', gemm_unrolled16, prepare_naive), 
-                GEMM('unrolled32_py', gemm_unrolled32, prepare_naive),]
+    try:
+        df = pd.read_sql_query("SELECT * FROM benchmarks", conn)
+    except pd.errors.DatabaseError:
+        df = None
+    
+    warmup = 0  # check is enough of a warmup
+    do_check = True
+    trials = 10
+    max_data = 100
+    sizes = [4096]
     runs = []
 
-    for version in versions:
-        _check_version(version)
-        for S in sizes:
-            N, M, K = S, S, S
-            
-            for _ in range(warmup):
-                benchmark(version, M, N, K)
-            
-            
-            for i in (pbar := tqdm(range(trials))):
-                pbar.set_description(f"Processing {version.name}:{S}")
+    for version_name in version_names:
+        try:
+            try:
+                version = kernels[version_name]
+            except KeyError:
+                print(f'skipping [{version_name}] (unrecognized)', end=' ')
+                continue
+            if do_check:
+                check(version)
+            for K in sizes:
+                if df is not None:
+                    size_filtered_df = df[df['size'] == K]
+                    if (size_filtered_df[size_filtered_df['version'] == version_name].count() >= max_data).any():
+                        print(f'skipping [{version.name}][{K}] (max data_reached)', end=' ')
+                        continue
                 
-                runs.append({'version': version.name, 'time': benchmark(version, M, N, K), 'size': S} ) 
-    
-    df = pd.DataFrame(runs)
-    df.to_sql("benchmarks", conn, if_exists="append", index=False)
-
-import sys
-from pathlib import Path
-sys.path.append("cgemm/build")
-import cgemm
-
-@dataclass
-class CGEMM:
-    name: str
-    run: Callable
-    prepare: Callable
-
-
-
-def cbenchmark(version: CGEMM, K):
-    cgemm_args = version.prepare(K)
-
-    t1 = perf_counter()
-    version.run(cgemm_args)
-    t2 = perf_counter()
-
-    return t2 - t1
+                for _ in range(warmup):
+                    benchmark(version, K)
+        
+                for i in (pbar := tqdm(range(trials))):
+                    pbar.set_description(f"Processing {version.name}:{K}")
+                    
+                    runs.append({'version': version_name, 'name': version.name, 'time': benchmark(version, K), 'size': K,
+                                 'precision': version.precision, 'device': version.device, 'language': version.language,
+                                }) 
+        
+        except RuntimeError as e:
+            print(e)
+    print('Done')
+    df_save = pd.DataFrame(runs)
+    df_save.to_sql("benchmarks", conn, if_exists="append", index=False)
 
 
-
-def cmain():
-
-    conn = sqlite3.connect("benchmarks.db")
-    warmup = 1
-    trials = 5
-    # sizes = [512, 1024]
-    # sizes = [128]
-    # sizes = [2048]
-    # versions = [CGEMM("naive_c", cgemm.naive_compute, cgemm.naive_prepare)]
-    versions = [CGEMM("naive_cu", cgemm.cu_naive_compute, cgemm.naive_prepare)]
-    runs = []
-
-    for version in versions:
-        for K in sizes:
-            
-            for _ in range(warmup):
-                cbenchmark(version, K)
-    
-            for i in (pbar := tqdm(range(trials))):
-                pbar.set_description(f"Processing {version.name}:{K}")
-                
-                runs.append({'version': version.name, 'time': cbenchmark(version, K), 'size': K} ) 
-    
-    df = pd.DataFrame(runs)
-    df.to_sql("benchmarks", conn, if_exists="append", index=False)
-
-def check_c():
-    epsilon = 1e-6
-    K = 64
-    # version = CGEMM("naive_c", cgemm.naive_compute, cgemm.naive_prepare)
-    version = CGEMM("naive_cu", cgemm.cu_naive_compute, cgemm.naive_prepare)
-    cgemm_args = version.prepare(K)
-    version.run(cgemm_args)
-    A = np.zeros((K, K))
-    B = np.zeros((K, K))
-    for i in range(K):
-        for j in range(K):
-            A[i, j] = cgemm.get_naive(cgemm_args, 0, i, j)
-            B[i, j] = cgemm.get_naive(cgemm_args, 1, i, j)
-    C = A @ B
-    error = 0
-    for i in range(K):
-        for j in range(K):
-            error += C[i, j] - cgemm.get_naive(cgemm_args, 2, i, j)
-    if error > epsilon:
-        print(f"ERROR IN VERSION [{version.name}]")
-    else:
-        print(f"VERSION [{version.name}] OK")
 
 if __name__ == "__main__":
-    # main()
-    # cmain()
-    check_c()
+    main()
     
