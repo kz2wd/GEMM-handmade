@@ -1,14 +1,13 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-
 #include "cgemm_naive.h"
-
-#include "cgemm_args.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+
+#include "cgemm_args.h"
 
 
 void init_mat(double* M, size_t K) {
@@ -37,7 +36,7 @@ PyObject* naive_prepare(PyObject* self, PyObject* args) {
     init_mat(gemm_args->B, K);
 
     return (PyObject *)gemm_args;
-}   
+}
 
 
 PyObject* naive_compute(PyObject* self, PyObject* args) {

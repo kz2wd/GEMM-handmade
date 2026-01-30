@@ -1,5 +1,5 @@
 import random
-
+import numpy as np
 
 """
 Docstring for gemm

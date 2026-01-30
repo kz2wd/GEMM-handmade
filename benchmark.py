@@ -5,21 +5,23 @@ from tqdm import tqdm
 
 from kernels import kernels, benchmark, check
 
-
 def main():
 
     version_names = [
-     'numpy', 
-    #    'naive_py', 'numpy_naive',
-    #    'loop_kmn', 'loop_knm', 'loop_mkn', 'loop_mnk', 'loop_nkm', 'loop_nmk',
-    #    'continuous_memory',
+    #   'numpy', 
+    #   'naive_py', 'numpy_naive',
+    #   'loop_kmn', 'loop_knm', 'loop_mkn', 'loop_mnk', 'loop_nkm', 'loop_nmk',
+    #   'continuous_memory',
     #   'unrolled2_py','unrolled4_py',
     #   'unrolled8_py', 'unrolled16_py', 'unrolled32_py', 
     #   'naive_c', 
     #   'naive_cu',
+    # 'numpy_FP32',
+        'loop_kmn'
     ]
     
     conn = sqlite3.connect("benchmarks.db")
+
     try:
         df = pd.read_sql_query("SELECT * FROM benchmarks", conn)
     except pd.errors.DatabaseError:
@@ -27,40 +29,43 @@ def main():
     
     warmup = 0  # check is enough of a warmup
     do_check = True
-    trials = 10
+    trials = 5
     max_data = 100
-    sizes = [4096]
+    sizes = [16, 32, 64, 128, 256, 512, 1024]
     runs = []
-
-    for version_name in version_names:
-        try:
+    try:
+        for version_name in version_names:
             try:
-                version = kernels[version_name]
-            except KeyError:
-                print(f'skipping [{version_name}] (unrecognized)', end=' ')
-                continue
-            if do_check:
-                check(version)
-            for K in sizes:
-                if df is not None:
-                    size_filtered_df = df[df['size'] == K]
-                    if (size_filtered_df[size_filtered_df['version'] == version_name].count() >= max_data).any():
-                        print(f'skipping [{version.name}][{K}] (max data_reached)', end=' ')
-                        continue
-                
-                for _ in range(warmup):
-                    benchmark(version, K)
-        
-                for i in (pbar := tqdm(range(trials))):
-                    pbar.set_description(f"Processing {version.name}:{K}")
+                try:
+                    version = kernels[version_name]
+                except KeyError:
+                    print(f'skipping [{version_name}] (unrecognized)', end=' ')
+                    continue
+                if do_check:
+                    check(version)
+                for K in sizes:
+                    if df is not None:
+                        size_filtered_df = df[df['size'] == K]
+                        if (size_filtered_df[size_filtered_df['version'] == version_name].count() >= max_data).any():
+                            print(f'skipping [{version.name}][{K}] (max data_reached)', end=' ')
+                            continue
                     
-                    runs.append({'version': version_name, 'name': version.name, 'time': benchmark(version, K), 'size': K,
-                                 'precision': version.precision, 'device': version.device, 'language': version.language,
-                                }) 
-        
-        except RuntimeError as e:
-            print(e)
-    print('Done')
+                    for _ in range(warmup):
+                        benchmark(version, K)
+            
+                    for i in (pbar := tqdm(range(trials))):
+                        pbar.set_description(f"Processing {version.name}:{K}")
+                        
+                        runs.append({'version': version_name, 'name': version.name, 'time': benchmark(version, K), 'size': K,
+                                    'precision': version.precision, 'device': version.device, 'language': version.language,
+                                    }) 
+            
+            except RuntimeError as e:
+                print(e)
+        print("Done")
+    except KeyboardInterrupt:
+        print("User cancelled")
+    print('Saving runs')
     df_save = pd.DataFrame(runs)
     df_save.to_sql("benchmarks", conn, if_exists="append", index=False)
 

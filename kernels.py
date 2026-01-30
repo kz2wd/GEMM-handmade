@@ -3,14 +3,14 @@ from time import perf_counter
 
 
 from gemm_py.gemm_naive import gemm_naive, prepare_naive, check_naive
-from gemm_py.gemm_numpy import gemm_numpy, prepare_numpy
+from gemm_py.gemm_numpy import gemm_numpy, prepare_numpy, prepare_numpy_float
 from gemm_py.loop_order.gemm_kmn import gemm_kmn
 from gemm_py.loop_order.gemm_knm import gemm_knm   
 from gemm_py.loop_order.gemm_mkn import gemm_mkn
 from gemm_py.loop_order.gemm_mnk import gemm_mnk
 from gemm_py.loop_order.gemm_nkm import gemm_nkm
 from gemm_py.loop_order.gemm_nmk import gemm_nmk
-from gemm_py.gemm_continuous import gemm_continuous, prepare_continuous
+from gemm_py.gemm_continuous import gemm_continuous, prepare_continuous, check_continuous
 from gemm_py.gemm_numpy_naive import numpy_naive
 from gemm_py.gemm_unrolled import gemm_unrolled2, gemm_unrolled4, gemm_unrolled8, gemm_unrolled16, gemm_unrolled32
 
@@ -97,20 +97,11 @@ def benchmark(version: GEMM, K):
 
 
 
-
-
-def check_continuous(version: GEMM):
-    # TO DO
-    return 0
-
-
-
-
 numpy_layout = DataLayout(prepare_numpy, check_numpy, naive_benchmark)
 naive_layout = DataLayout(prepare_naive, check_naive, naive_benchmark)
 continuous_layout = DataLayout(prepare_continuous, check_continuous, naive_benchmark)
 cnaive_layout = DataLayout(cgemm.naive_prepare, check_c, cbenchmark)
-
+numpy_FP32_layout = DataLayout(prepare_numpy_float, check_numpy, naive_benchmark)
 
 kernels = {
     'numpy': GEMM('numpy', 'FP64', 'CPU', 'python', gemm_numpy, numpy_layout),
@@ -130,4 +121,5 @@ kernels = {
     'unrolled32_py': GEMM('unrolled32 py', 'FP64', 'CPU', 'python', gemm_unrolled32, naive_layout),
     'naive_c': GEMM("naive c", 'FP64', 'CPU', 'c', cgemm.naive_compute, cnaive_layout),
     'naive_cu': GEMM("naive cuda", 'FP64', 'GPU', 'cuda', cgemm.cu_naive_compute, cnaive_layout),
+    'numpy_FP32': GEMM("numpy FP32", 'FP32', 'CPU', 'python', gemm_numpy, numpy_FP32_layout),
 }

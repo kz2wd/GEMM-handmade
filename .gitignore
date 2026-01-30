@@ -11,3 +11,5 @@ wheels/
 *.db
 .python-version
 .vscode/
+
+c_compil_tests

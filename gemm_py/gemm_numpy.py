@@ -22,3 +22,10 @@ def prepare_numpy(M, N, K, init_a=random_gen, init_b=random_gen):
     B = get_mat(init_b, K, N).astype(np.double)
     C = np.zeros((K, K))
     return A, B, C
+
+
+def prepare_numpy_float(M, N, K, init_a=random_gen, init_b=random_gen):
+    A = get_mat(init_a, M, K).astype(np.float32)
+    B = get_mat(init_b, K, N).astype(np.float32)
+    C = np.zeros((K, K)).astype(np.float32)
+    return A, B, C
