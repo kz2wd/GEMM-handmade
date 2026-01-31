@@ -40,3 +40,13 @@ PyObject* get_naive(PyObject* self, PyObject* args) {
     int K = gemm_args->K;
     return PyFloat_FromDouble(at(target, i, j));
 }
+
+void init_mat(double* M, size_t K) {
+ 
+    double x = RAND_MAX / 100.0;
+    for (size_t m = 0; m < K; ++m) {
+        for (size_t n = 0; n < K; ++n) {
+            at(M, m, n) = rand() / x;
+        }
+    }
+}

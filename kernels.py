@@ -16,7 +16,7 @@ from gemm_py.gemm_unrolled import gemm_unrolled2, gemm_unrolled4, gemm_unrolled8
 
 import sys
 from pathlib import Path
-sys.path.append("cgemm/build")
+sys.path.append("cgemm/build/src")
 import cgemm
 
 from collections.abc import Callable
@@ -102,6 +102,8 @@ naive_layout = DataLayout(prepare_naive, check_naive, naive_benchmark)
 continuous_layout = DataLayout(prepare_continuous, check_continuous, naive_benchmark)
 cnaive_layout = DataLayout(cgemm.naive_prepare, check_c, cbenchmark)
 numpy_FP32_layout = DataLayout(prepare_numpy_float, check_numpy, naive_benchmark)
+caligned_layout = DataLayout(cgemm.aligned_memory_prepare, check_c, cbenchmark)
+
 
 kernels = {
     'numpy': GEMM('numpy', 'FP64', 'CPU', 'python', gemm_numpy, numpy_layout),
@@ -122,4 +124,5 @@ kernels = {
     'naive_c': GEMM("naive c", 'FP64', 'CPU', 'c', cgemm.naive_compute, cnaive_layout),
     'naive_cu': GEMM("naive cuda", 'FP64', 'GPU', 'cuda', cgemm.cu_naive_compute, cnaive_layout),
     'numpy_FP32': GEMM("numpy FP32", 'FP32', 'CPU', 'python', gemm_numpy, numpy_FP32_layout),
+    'block_c': GEMM("blocked c", 'FP64', 'CPU', 'c', cgemm.kernel_compute, caligned_layout),
 }

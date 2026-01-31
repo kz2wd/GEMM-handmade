@@ -83,7 +83,7 @@ def plot_times():
 
 
 if __name__ == "__main__":
-    # plot_times()
-    plot_smaller()
+    plot_times()
+    # plot_smaller()
 
 

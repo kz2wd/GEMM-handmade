@@ -17,7 +17,8 @@ def main():
     #   'naive_c', 
     #   'naive_cu',
     # 'numpy_FP32',
-        'loop_kmn'
+    #   'loop_kmn',
+        'block_c',
     ]
     
     conn = sqlite3.connect("benchmarks.db")

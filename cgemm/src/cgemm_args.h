@@ -20,6 +20,8 @@ extern PyTypeObject PyGEMMArgsType;
 
 PyObject* get_naive(PyObject* self, PyObject* args);
 
+void init_mat(double* M, size_t K);
+
 // i is row, j is column
 // Beware of indexes order
 #define at(M, i, j) (M[(K) * (i) + (j)]) 

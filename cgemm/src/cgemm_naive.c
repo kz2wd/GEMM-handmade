@@ -10,16 +10,6 @@
 #include "cgemm_args.h"
 
 
-void init_mat(double* M, size_t K) {
- 
-    double x = RAND_MAX / 100.0;
-    for (size_t m = 0; m < K; ++m) {
-        for (size_t n = 0; n < K; ++n) {
-            at(M, m, n) = rand() / x;
-        }
-    }
-}
-
 PyObject* naive_prepare(PyObject* self, PyObject* args) {
     size_t K;
     if (!PyArg_ParseTuple(args, "n", &K)) return NULL;
