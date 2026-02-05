@@ -11,5 +11,6 @@ dependencies = [
     "pandas>=2.3.3",
     "pyqt6>=6.10.1",
     "seaborn>=0.13.2",
+    "snakeviz>=2.2.2",
     "tqdm>=4.67.1",
 ]

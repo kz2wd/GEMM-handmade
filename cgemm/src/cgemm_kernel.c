@@ -26,8 +26,8 @@ Constraints:
 - W = 2^n
 
 */
-#define U 12
-#define V 16
+#define U 128
+#define V 128
 #define W 128
 
 
@@ -51,12 +51,16 @@ PyObject* aligned_memory_prepare(PyObject* self, PyObject* args) {
 }
 
 
+//static double* kC;
+//static double* sB;
+
+
 // Compute sub block of shape (U,V)
-inline void kernel(double * kA, double * kB,  double* kC, const size_t K){
+static void kernel(double * kA, double * kB, double* kC, const size_t K){
     for (size_t u = 0; u < U; ++u) {
         for (size_t v = 0; v < V; ++v) {
             for (size_t w = 0; w < W; ++w) {
-                kC[u * U * K + v * V] += kA[w * K + v] * kB[v * K + w];
+                kC[u * K + v] += kA[w * K + v] * kB[w + u * K];
             }
         }
     }
@@ -64,12 +68,12 @@ inline void kernel(double * kA, double * kB,  double* kC, const size_t K){
 
 
 // split blocks of shape A: (W,V) and B: (U,X) into (U,V)
-inline void subblock(double * sA, double * sB, double* kC, size_t K) {
+static void sub_block(double * sA, double * sB, double* kC, size_t K) {
     const size_t WU = W/U;
     const size_t WV = W/V;
 
     for (size_t wu = 0; wu < WU; ++wu) {
-        double * kA = sA + wu * U * K; 
+        double * kA = sA + wu * U * K;
         for (size_t wv = 0; wv < WV; ++wv) {
             double * kB = sB + wv * V;
             kernel(kA, kB, kC, K);
@@ -79,22 +83,37 @@ inline void subblock(double * sA, double * sB, double* kC, size_t K) {
 }
 
 // full compute of a C block of shape (U, V) that depends on column of A (K, v) and row of B (u, K) 
-inline void Cblock(double * colA, double * rowB, double* kC,  size_t K) {
+static void c_block(double * colA, double * rowB, double* kC,  size_t K) {
 
     const size_t KW = K/W;
-
     // Load C into registers
     for (size_t kw = 0; kw < KW; ++kw) {
         // sub block of A: (W, V)
         double* sA = colA + kw * W * K;
+        // sub block of B: (X, U)
+        double* sB = rowB + kw * W;
+        sub_block(sA, sB, kC, K);
+        
+    }
+}
 
-        for (size_t kw2 = 0; kw2 < KW; ++kw2) {
-            // Here B will change more than A; rowB and sA should be in cache L1/L2 (remaining of colA can wait in L2/L3) 
+void kernel_compute_intern(double* A, double* B, double* C, size_t K) {
+    const size_t KU = K/U;
+    const size_t KV = K/V;
 
-            // sub block of B: (X, U)
-            double* sB = rowB + kw2 * W;
-            
-            subblock(sA, sB, kC, K);
+    const size_t KW = K/W;
+    const size_t WU = W/U;
+    const size_t WV = W/V;
+
+    for (size_t ku = 0; ku < KU; ++ku) {
+        for (size_t kv = 0; kv < KV; ++kv) {
+            // kC: kernel size block of C: (U,V)
+            double * kC = C + ku * U * K + kv * V;
+            // Column of A: (K, V)
+            double * colA = A + kv * V;
+            // Row of B: (U, K)
+            double * rowB = B + ku * U * K;
+            c_block(colA, rowB, kC, K);
         }
     }
 }
@@ -110,23 +129,8 @@ PyObject* kernel_compute(PyObject* self, PyObject* args) {
     double * C = gemm_args->C;
     const size_t K = gemm_args->K;
 
-    const size_t KU = K/U;
-    const size_t KV = K/V;
-    
-    for (size_t ku = 0; ku < KU; ++ku) {
-        for (size_t kv = 0; kv < KV; ++kv) {
-            // kC: kernel size block of C: (U,V)
-            double * kC = C + ku * U * K + kv * V;
-
-            // Column of A: (K, V)
-            double * colA = A + ku * U * K + kv * V;
-            // Row of B: (U, K)
-            double * rowB = B + ku * U * K + kv * V;
-            
-            Cblock(colA, rowB, kC, K);
-            
-        }
-    }
+   
+    kernel_compute_intern(A, B, C, K);
 
     Py_INCREF(Py_None);
     return Py_None;

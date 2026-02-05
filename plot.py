@@ -64,7 +64,7 @@ def plot_flops_cpu():
     plt.show()
 
 def plot_smaller():
-    versions_to_plot = ['loop_kmn']
+    versions_to_plot = ['naive_c', 'block_c', 'kernel_c', 'naive_acc_compute']
     df = fetch_df(versions_to_plot)
     df['GFLOPS'] = df.apply(lambda row: (2 * row['size'] ** 3) / row['time'] * 1e-9, axis=1)
     sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=.25, legend=None)
@@ -83,7 +83,7 @@ def plot_times():
 
 
 if __name__ == "__main__":
-    plot_times()
-    # plot_smaller()
+    # plot_times()
+    plot_smaller()
 
 

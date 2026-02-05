@@ -66,7 +66,7 @@ def check_numpy(_):
 
 def check_c(version: GEMM):
     epsilon = 1e-6
-    K = 64
+    K = 128
     cgemm_args = version.layout.prepare(K)
     version.run(cgemm_args)
     A = np.zeros((K, K))
@@ -122,7 +122,9 @@ kernels = {
     'unrolled16_py': GEMM('unrolled16 py', 'FP64', 'CPU', 'python', gemm_unrolled16, naive_layout), 
     'unrolled32_py': GEMM('unrolled32 py', 'FP64', 'CPU', 'python', gemm_unrolled32, naive_layout),
     'naive_c': GEMM("naive c", 'FP64', 'CPU', 'c', cgemm.naive_compute, cnaive_layout),
+    'naive_acc_compute': GEMM("naive accumulator", 'FP64', 'CPU', 'c', cgemm.naive_acc_compute, cnaive_layout),
     'naive_cu': GEMM("naive cuda", 'FP64', 'GPU', 'cuda', cgemm.cu_naive_compute, cnaive_layout),
     'numpy_FP32': GEMM("numpy FP32", 'FP32', 'CPU', 'python', gemm_numpy, numpy_FP32_layout),
-    'block_c': GEMM("blocked c", 'FP64', 'CPU', 'c', cgemm.kernel_compute, caligned_layout),
+    'block_c': GEMM("blocked c", 'FP64', 'CPU', 'c', cgemm.block_compute, cnaive_layout),
+    'kernel_c': GEMM("kernel c", 'FP64', 'CPU', 'c', cgemm.kernel_compute, caligned_layout),
 }

@@ -52,6 +52,31 @@ PyObject* naive_compute(PyObject* self, PyObject* args) {
     return Py_None;
 }
 
+PyObject* naive_acc_compute(PyObject* self, PyObject* args) {
+    
+    PyGEMMArgs* gemm_args;
+    
+    if (!PyArg_ParseTuple(args, "O!", &PyGEMMArgsType, &gemm_args)) return NULL;
+    
+    double* A = gemm_args->A;
+    double* B = gemm_args->B;
+    double* C = gemm_args->C;
+    size_t K = gemm_args->K;
+
+    for (size_t m = 0; m < K; ++m) {
+        for (size_t n = 0; n < K; ++n) {
+            double c = 0;
+            for (size_t k = 0; k < K; ++k) {
+                c += at(A, m, k) * at(B, k, n);
+            }
+            at(C, m, n) = c;
+        }
+    }
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
 
 void print_mat(double* M, size_t K) {
     for (size_t m = 0; m < K; ++m) {

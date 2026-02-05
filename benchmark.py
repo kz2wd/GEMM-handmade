@@ -14,11 +14,13 @@ def main():
     #   'continuous_memory',
     #   'unrolled2_py','unrolled4_py',
     #   'unrolled8_py', 'unrolled16_py', 'unrolled32_py', 
-    #   'naive_c', 
+    # 'naive_c', 
     #   'naive_cu',
     # 'numpy_FP32',
     #   'loop_kmn',
-        'block_c',
+    # 'block_c',
+    # 'kernel_c',
+     'naive_acc_compute',
     ]
     
     conn = sqlite3.connect("benchmarks.db")
@@ -32,7 +34,7 @@ def main():
     do_check = True
     trials = 5
     max_data = 100
-    sizes = [16, 32, 64, 128, 256, 512, 1024]
+    sizes = [128, 256, 512, 1024] + list(range(1024 + 512, 4096 + 1, 512))
     runs = []
     try:
         for version_name in version_names:
