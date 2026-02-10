@@ -80,6 +80,7 @@ def plot_flops_cpu():
         errorbar=None,
     )
     plt.title("Global GFLOPS")
+
     plt.axhline(y=412.8, label="FP64 GFLOPS LIMIT")
     plt.axhline(y=345.6, label="FP64 GFLOPS SUSTAIN")
     plt.axhline(y=412.8 * 2, label="FP32 GFLOPS LIMIT")
@@ -103,7 +104,9 @@ def plot_smaller():
         linestyle="none",
         markersize=4,
         errorbar=None,
+        dodge=True,
     )
+    plt.axhline(y=57.6, label="FP64 GFLOPS LIMIT")
     plt.title("Global GFLOPS")
     plt.show()
 

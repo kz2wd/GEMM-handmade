@@ -1,3 +1,4 @@
+#include <stddef.h>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
@@ -27,8 +28,8 @@ Constraints:
 - W = 2^n
 
 */
-#define U 16
-#define V 8
+#define U 8
+#define V 4
 #define W 128
 
 
@@ -52,47 +53,94 @@ PyObject* aligned_memory_prepare(PyObject* self, PyObject* args) {
 }
 
 
-//static double* kC;
-//static double* sB;
+typedef const double* const f64ro;
+typedef double* const f64rw;
+typedef const size_t dim;
 
-// Compute sub block of shape (U,V)
-static void ckernel8x16(double * kA, double * kB, double* kC, const size_t K){
+__m256d c00;
+__m256d c10;
+__m256d c01;
+__m256d c11;
+__m256d c02;
+__m256d c12;
+__m256d c03;
+__m256d c13;
 
-    __m256d a00 = _mm256_load_pd(kA);
-    __m256d b00 = _mm256_load_pd(kB);
-    __m256d c00 = _mm256_load_pd(kC);
+// Util func, should never be used
+static void load_kernel_block(f64rw kC,  dim K){
+    c00 = _mm256_load_pd(kC);
+    c10 = _mm256_load_pd(kC + 4);
 
-    __m256d a10 = _mm256_load_pd(kA + 4);
-    __m256d b10 = _mm256_load_pd(kB);
-    __m256d c10 = _mm256_load_pd(kC);
+    c01 = _mm256_load_pd(kC + K);
+    c11 = _mm256_load_pd(kC + 4 + K);
 
-    __m256d a20 = _mm256_load_pd(kA + 8);
-    __m256d b20 = _mm256_load_pd(kB);
-    __m256d c20 = _mm256_load_pd(kC);
+    c02 = _mm256_load_pd(kC + 2 * K);
+    c12 = _mm256_load_pd(kC + 4 + 2 * K);
 
-    __m256d a30 = _mm256_load_pd(kA + 12);
-    __m256d b30 = _mm256_load_pd(kB);
-    __m256d c30 = _mm256_load_pd(kC);
+    c03 = _mm256_load_pd(kC + 3 * K);
+    c13 = _mm256_load_pd(kC + 4 + 3 * K);
+}
 
-    __m256d a01 = _mm256_load_pd(kA);
-    __m256d b01 = _mm256_load_pd(kB);
-    __m256d c01 = _mm256_load_pd(kC);
+static void prepare_kernel_block(){
+    c00 = _mm256_setzero_pd();
+    c10 = _mm256_setzero_pd();
 
-    __m256d a11 = _mm256_load_pd(kA + 4);
-    __m256d b11 = _mm256_load_pd(kB);
-    __m256d c11 = _mm256_load_pd(kC);
+    c01 = _mm256_setzero_pd();
+    c11 = _mm256_setzero_pd();
 
-    __m256d a21 = _mm256_load_pd(kA + 8);
-    __m256d b21 = _mm256_load_pd(kB);
-    __m256d c21 = _mm256_load_pd(kC);
+    c02 = _mm256_setzero_pd();
+    c12 = _mm256_setzero_pd();
 
-    __m256d a31 = _mm256_load_pd(kA + 8);
-    __m256d b31 = _mm256_load_pd(kB);
-    __m256d c31 = _mm256_load_pd(kC);
+    c03 = _mm256_setzero_pd();
+    c13 = _mm256_setzero_pd();
+}
+
+static void store_kernel_block(f64rw kC,  dim K){
+    _mm256_store_pd(kC, c00);
+    _mm256_store_pd(kC + 4, c10);
+
+    _mm256_store_pd(kC + K, c01);
+    _mm256_store_pd(kC + 4 + K, c11);
+
+    _mm256_store_pd(kC + 2 * K, c02);
+    _mm256_store_pd(kC + 4 + 2 * K, c12);
+
+    _mm256_store_pd(kC + 3 * K, c03);
+    _mm256_store_pd(kC + 4 + 3 * K, c13);
+
+}
+
+
+// kA: (U, V) @ ssB: (U, U) = kC: (U, V)
+static void ckernel8x4(f64ro kA, f64ro ssB, f64rw kC, dim K){
+
+    for (size_t u = 0; u < U; ++u) {
+
+        __m256d b00 = _mm256_load_pd(ssB + K * u);
+        __m256d b10 = _mm256_load_pd(ssB + 4 + K * u);
+
+        __m256d a000 =_mm256_broadcast_sd(kA + u);
+        c00 = _mm256_fmadd_pd(a000, b00, c00);
+        c10 = _mm256_fmadd_pd(a000, b10, c10);
+
+        __m256d a010 =_mm256_broadcast_sd(kA + K + u);
+        c01 = _mm256_fmadd_pd(a010, b00, c01);
+        c11 = _mm256_fmadd_pd(a010, b10, c11);
+
+        __m256d a020 =_mm256_broadcast_sd(kA + 2 * K + u);
+        c02 = _mm256_fmadd_pd(a020, b00, c02);
+        c12 = _mm256_fmadd_pd(a020, b10, c12);
+
+        __m256d a030 =_mm256_broadcast_sd(kA + 3 * K + u);
+        c03 = _mm256_fmadd_pd(a030, b00, c03);
+        c13 = _mm256_fmadd_pd(a030, b10, c13);
+    }
+
 }
 
 // kA: (U, V) @ ssB: (U, U) = kC: (U, V)
-static void tmpkernel(double* kA, double* ssB, double* kC, const size_t K){
+static void tmpkernel(f64ro kA, f64ro ssB, f64rw kC, dim K){
+
     for (size_t u = 0; u < U; ++u){
         for (size_t v = 0; v < V; ++v){
             for (size_t inner_u = 0; inner_u < U; ++inner_u){
@@ -103,37 +151,35 @@ static void tmpkernel(double* kA, double* ssB, double* kC, const size_t K){
 }
 
 // split blocks of shape sA: (W,V) and sB: (U,W) into kC (U,V)
-static void sub_block(double * sA, double * sB, double* kC, size_t K) {
-    const size_t WU = W/U;
-    const size_t WV = W/V;
+static void sub_block(f64ro sA, f64ro sB, f64rw kC, dim K) {
+    dim WU = W/U;
+    dim WV = W/V;
 
-    // U = 2 V ASSUMED
     for (size_t wu = 0; wu < WU; ++wu) {
-        double * kA = sA + wu * U;
+        f64ro kA = sA + wu * U;
 
-        double * ssB = sB + wu * U * K;
-        //ckernel8x16(kA, kB, kC, K);
-        tmpkernel(kA, ssB, kC, K);
-
-
+        f64ro ssB = sB + wu * U * K;
+        ckernel8x4(kA, ssB, kC, K);
     }
 
 }
 
-// full compute of a C block of shape (U, V) that depends on row of A (K, V) and column of B (U, K)
-static void c_block(double * rowA, double * colB, double* kC,  size_t K) {
 
-    const size_t KW = K/W;
+// full compute of a C block of shape (U, V) that depends on row of A (K, V) and column of B (U, K)
+static void c_block(f64ro rowA, f64ro colB, f64rw kC, dim K) {
+    prepare_kernel_block();
+    dim KW = K/W;
     // Load C into registers
     for (size_t kw = 0; kw < KW; ++kw) {
         // sub block of A: (W, V)
-        double* sA = rowA + kw * W;
+        f64ro sA = rowA + kw * W;
         // sub block of B: (X, U)
-        double* sB = colB + kw * W * K;
+        f64ro sB = colB + kw * W * K;
         // todo: transpose B
         sub_block(sA, sB, kC, K);
 
     }
+    store_kernel_block(kC, K);
 }
 
 
@@ -145,18 +191,18 @@ static void c_block(double * rowA, double * colB, double* kC,  size_t K) {
 // A A A C C C
 // A A A C C C
 // A A A C C C
-void kernel_compute_intern(double* A, double* B, double* C, size_t K) {
-    const size_t KU = K/U;
-    const size_t KV = K/V;
+void kernel_compute_intern(f64ro A, f64ro B, f64rw C, dim K) {
+    dim KU = K/U;
+    dim KV = K/V;
 
     for (size_t ku = 0; ku < KU; ++ku) {
         for (size_t kv = 0; kv < KV; ++kv) {
             // kC: kernel size block of C: (U,V)
-            double * kC = C + ku * U * K + kv * V;
+            f64rw kC = C + ku * U * K + kv * V;
             // Column of B: (U, K)
-            double * colB = B + ku * U;
+            f64ro colB = B + ku * U;
             // Row of A: (K, V)
-            double * rowA = A + kv * V * K;
+            f64ro rowA = A + kv * V * K;
             c_block(rowA, colB, kC, K);
         }
     }
