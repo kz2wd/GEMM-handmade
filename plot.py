@@ -1,19 +1,20 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib
-import seaborn as sns
 import sqlite3
+
+import matplotlib
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 
 def fetch_df(versions_to_plot):
     conn = sqlite3.connect("benchmarks.db")
-    
+
     if not versions_to_plot:
         df = pd.read_sql_query("SELECT * FROM benchmarks", conn)
     else:
-        placeholder = ", ".join('?' for _ in versions_to_plot) 
+        placeholder = ", ".join("?" for _ in versions_to_plot)
         query = f"SELECT * FROM benchmarks WHERE version IN ({placeholder})"
-        df = pd.read_sql_query(query, conn, params = versions_to_plot)
+        df = pd.read_sql_query(query, conn, params=versions_to_plot)
 
     return df
 
@@ -30,32 +31,54 @@ def fetch_df(versions_to_plot):
 
 # 3070 ti https://www.techpowerup.com/gpu-specs/geforce-rtx-3070-ti.c3675
 # FP64 339.8 GFLOPS
-# FP32 21.75 TFLOPS 
+# FP32 21.75 TFLOPS
 
 # GEMM FLOP -> 2K**3 - K**2 -> 2K**3
 # FLOPS of run: GEMM FLOP / run time
 
 
 def plot_flops_global():
-    
+
     versions_to_plot = []
     # versions_to_plot = ["numpy", 'naive_c', 'unrolled32_py']
     df = fetch_df(versions_to_plot)
-    df['GFLOPS'] = df.apply(lambda row: (2 * row['size'] ** 3) / row['time'] * 1e-9, axis=1)
-    sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=.25, legend=None)
-    sns.pointplot(data=df, y="GFLOPS", x="size", hue="name", markers="d", linestyle="none", markersize=4, errorbar=None)
+    df["GFLOPS"] = df.apply(
+        lambda row: (2 * row["size"] ** 3) / row["time"] * 1e-9, axis=1
+    )
+    sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=0.25, legend=None)
+    sns.pointplot(
+        data=df,
+        y="GFLOPS",
+        x="size",
+        hue="name",
+        markers="d",
+        linestyle="none",
+        markersize=4,
+        errorbar=None,
+    )
     plt.title("Global GFLOPS")
     plt.show()
 
 
 def plot_flops_cpu():
-    
+
     versions_to_plot = []
-    versions_to_plot = ["numpy", 'naive_c', 'unrolled32_py', 'numpy_FP32']
+    versions_to_plot = ["numpy", "naive_c", "unrolled32_py", "numpy_FP32"]
     df = fetch_df(versions_to_plot)
-    df['GFLOPS'] = df.apply(lambda row: (2 * row['size'] ** 3) / row['time'] * 1e-9, axis=1)
-    sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=.25, legend=None)
-    sns.pointplot(data=df, y="GFLOPS", x="size", hue="name", markers="d", linestyle="none", markersize=4, errorbar=None)
+    df["GFLOPS"] = df.apply(
+        lambda row: (2 * row["size"] ** 3) / row["time"] * 1e-9, axis=1
+    )
+    sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=0.25, legend=None)
+    sns.pointplot(
+        data=df,
+        y="GFLOPS",
+        x="size",
+        hue="name",
+        markers="d",
+        linestyle="none",
+        markersize=4,
+        errorbar=None,
+    )
     plt.title("Global GFLOPS")
     plt.axhline(y=412.8, label="FP64 GFLOPS LIMIT")
     plt.axhline(y=345.6, label="FP64 GFLOPS SUSTAIN")
@@ -63,27 +86,47 @@ def plot_flops_cpu():
     plt.legend()
     plt.show()
 
+
 def plot_smaller():
-    versions_to_plot = ['naive_c', 'block_c', 'kernel_c', 'naive_acc_compute']
+    versions_to_plot = ["naive_c", "block_c", "kernel_c"]
     df = fetch_df(versions_to_plot)
-    df['GFLOPS'] = df.apply(lambda row: (2 * row['size'] ** 3) / row['time'] * 1e-9, axis=1)
-    sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=.25, legend=None)
-    sns.pointplot(data=df, y="GFLOPS", x="size", hue="name", markers="d", linestyle="none", markersize=4, errorbar=None)
+    df["GFLOPS"] = df.apply(
+        lambda row: (2 * row["size"] ** 3) / row["time"] * 1e-9, axis=1
+    )
+    sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=0.25, legend=None)
+    sns.pointplot(
+        data=df,
+        y="GFLOPS",
+        x="size",
+        hue="name",
+        markers="d",
+        linestyle="none",
+        markersize=4,
+        errorbar=None,
+    )
     plt.title("Global GFLOPS")
     plt.show()
 
+
 def plot_times():
-     
+
     versions_to_plot = []
-    #versions_to_plot = ["numpy", 'naive_c', 'unrolled32_py']
+    # versions_to_plot = ["numpy", 'naive_c', 'unrolled32_py']
     df = fetch_df(versions_to_plot)
-    sns.stripplot(data=df, y="time", x="size", hue="name", alpha=.25, legend=None)
-    sns.pointplot(data=df, y="time", x="size", hue="name", markers="d", linestyle="none", markersize=4, errorbar=None)
+    sns.stripplot(data=df, y="time", x="size", hue="name", alpha=0.25, legend=None)
+    sns.pointplot(
+        data=df,
+        y="time",
+        x="size",
+        hue="name",
+        markers="d",
+        linestyle="none",
+        markersize=4,
+        errorbar=None,
+    )
     plt.show()
 
 
 if __name__ == "__main__":
     # plot_times()
     plot_smaller()
-
-

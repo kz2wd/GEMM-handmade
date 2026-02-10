@@ -13,3 +13,12 @@ wheels/
 .vscode/
 
 c_compil_tests
+
+.zed
+
+.cache
+CMakeFiles
+cmake_install.cmake
+Makefile
+CMakeCache.txt
+compile_commands.json
