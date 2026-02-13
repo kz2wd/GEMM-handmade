@@ -15,10 +15,12 @@ target_compile_options(cgemm PRIVATE
     -O3
     -g
     -pg
-    -fPIC
 )
-target_link_libraries(cgemm PRIVATE Python::Python)
+target_link_options(cgemm PRIVATE
+    -pg
+)
 
+target_link_libraries(cgemm PRIVATE Python::Python)
 set_target_properties(cgemm PROPERTIES
     PREFIX ""
     CUDA_SEPARABLE_COMPILATION ON

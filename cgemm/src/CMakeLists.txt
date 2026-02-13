@@ -11,3 +11,19 @@ set_source_files_properties(
     PROPERTIES
     COMPILE_OPTIONS "-fopt-info-optimized;-fopt-info-missed"
 )
+
+add_executable(standalone_runner ${ALL_SRC_FILES})
+
+target_link_libraries(standalone_runner PRIVATE Python::Python)
+
+target_compile_options(standalone_runner PRIVATE
+    -mavx2
+    -mfma
+    -march=native
+    -O3
+    -g
+    -pg
+)
+target_link_options(standalone_runner PRIVATE
+    -pg
+)

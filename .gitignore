@@ -22,3 +22,7 @@ cmake_install.cmake
 Makefile
 CMakeCache.txt
 compile_commands.json
+
+gmon.out
+perf.data
+perf.data.old

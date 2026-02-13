@@ -168,6 +168,6 @@ kernels = {
         "blocked c", "FP64", "CPU", "c", cgemm.block_compute, cnaive_layout
     ),
     "kernel_c": GEMM(
-        "kernel c v7", "FP64", "CPU", "c", cgemm.kernel_compute, caligned_layout
+        "kernel c v9", "FP64", "CPU", "c", cgemm.kernel_compute, caligned_layout
     ),
 }
