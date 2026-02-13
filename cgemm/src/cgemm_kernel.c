@@ -63,13 +63,13 @@ typedef struct {
 
 
 
-static double* prepare_csb(dim K) {
-    double* csb = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * U * K);
-    return csb;
+static double* prepare_ccb(dim K) {
+    double* ccb = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * U * K);
+    return ccb;
 }
 
-static void free_csb(double* csb){
-    free(csb);
+static void free_ccb(double* ccb){
+    free(ccb);
 }
 
 static void sparse_copy_B(f64ro sB, f64rw csb, dim K) {
@@ -84,7 +84,7 @@ static void sparse_copy_B(f64ro sB, f64rw csb, dim K) {
     __builtin_prefetch(sB + 6 * K, 0, 3);
     __builtin_prefetch(sB + 7 * K, 0, 3);
 
-    for (size_t w = 0; w < W; w += 8) {
+    for (size_t w = 0; w < K; w += 8) {
         __builtin_prefetch(sB + (w + 0 + 8) * K, 0, 2);
         __builtin_prefetch(sB + (w + 1 + 8) * K, 0, 2);
         __builtin_prefetch(sB + (w + 2 + 8) * K, 0, 2);
@@ -182,9 +182,8 @@ static void ckernel8x4_csb(f64ro srA, f64ro csb, ckernel* core, dim K){
 }
 
 // full compute of a C block of shape (U, V) that depends on row of A (K, V) and column of B (U, K)
-static void c_block(f64ro rowA, f64ro colB, f64rw csb, f64rw kC, dim K) {
+static void c_block(f64ro rowA, f64ro colB, f64rw ccb, f64rw kC, dim K) {
     dim KW = K/W;
-
 
     // Load C into registers
     ckernel core = prepare_kernel_block();
@@ -193,13 +192,10 @@ static void c_block(f64ro rowA, f64ro colB, f64rw csb, f64rw kC, dim K) {
         // sub row of A: (W, V)
         f64ro srA = rowA + kw * W;
         // sub col of B: (X, U)
-        f64ro scB = colB + kw * W * K;
+        f64ro csb = ccb + kw * W;
 
-        // todo: extract B sublock so that it becomes continuous
-        sparse_copy_B(scB, csb, K);
         // ckernel8x4(srA, scB, kC, K);
         ckernel8x4_csb(srA, csb, &core, K);
-
     }
 
     store_kernel_block(kC, &core, K);
@@ -219,21 +215,25 @@ void kernel_compute_intern(f64ro A, f64ro B, f64rw C, dim K) {
     dim KU = K/U;
     dim KV = K/V;
 
-    f64rw csb = prepare_csb(K);
+    f64rw ccb = prepare_ccb(K);
 
     for (size_t ku = 0; ku < KU; ++ku) {
+
+        // todo: extract B sublock so that it becomes continuous
+        // Column of B: (U, K)
+        f64ro colB = B + ku * U;
+        sparse_copy_B(colB, ccb, K);
         for (size_t kv = 0; kv < KV; ++kv) {
             // kC: kernel size block of C: (U,V)
             f64rw kC = C + ku * U + kv * V * K;
-            // Column of B: (U, K)
-            f64ro colB = B + ku * U;
+
             // Row of A: (K, V)
             f64ro rowA = A + kv * V * K;
-            c_block(rowA, colB, csb, kC, K);
+            c_block(rowA, colB, ccb, kC, K);
         }
     }
 
-    free_csb(csb);
+    free_ccb(ccb);
 }
 
 PyObject* kernel_compute(PyObject* self, PyObject* args) {
