@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stddef.h>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
@@ -62,8 +63,8 @@ typedef struct {
 
 
 
-static double* prepare_csb() {
-    double* csb = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * U * W);
+static double* prepare_csb(dim K) {
+    double* csb = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * U * K);
     return csb;
 }
 
@@ -72,8 +73,34 @@ static void free_csb(double* csb){
 }
 
 static void sparse_copy_B(f64ro sB, f64rw csb, dim K) {
-    for (size_t w = 0; w < W; ++w) {
-        memcpy(csb + w * U, sB + w * K, U * sizeof(double));
+    dim Ud = U * sizeof(double);
+
+    __builtin_prefetch(sB + 0 * K, 0, 3);
+    __builtin_prefetch(sB + 1 * K, 0, 3);
+    __builtin_prefetch(sB + 2 * K, 0, 3);
+    __builtin_prefetch(sB + 3 * K, 0, 3);
+    __builtin_prefetch(sB + 4 * K, 0, 3);
+    __builtin_prefetch(sB + 5 * K, 0, 3);
+    __builtin_prefetch(sB + 6 * K, 0, 3);
+    __builtin_prefetch(sB + 7 * K, 0, 3);
+
+    for (size_t w = 0; w < W; w += 8) {
+        __builtin_prefetch(sB + (w + 0 + 8) * K, 0, 2);
+        __builtin_prefetch(sB + (w + 1 + 8) * K, 0, 2);
+        __builtin_prefetch(sB + (w + 2 + 8) * K, 0, 2);
+        __builtin_prefetch(sB + (w + 3 + 8) * K, 0, 2);
+        __builtin_prefetch(sB + (w + 4 + 8) * K, 0, 3);
+        __builtin_prefetch(sB + (w + 5 + 8) * K, 0, 3);
+        __builtin_prefetch(sB + (w + 6 + 8) * K, 0, 3);
+        __builtin_prefetch(sB + (w + 7 + 8) * K, 0, 3);
+        memcpy(csb + (w + 0) * U, sB + (w + 0) * K, Ud);
+        memcpy(csb + (w + 1) * U, sB + (w + 1) * K, Ud);
+        memcpy(csb + (w + 2) * U, sB + (w + 2) * K, Ud);
+        memcpy(csb + (w + 3) * U, sB + (w + 3) * K, Ud);
+        memcpy(csb + (w + 4) * U, sB + (w + 4) * K, Ud);
+        memcpy(csb + (w + 5) * U, sB + (w + 5) * K, Ud);
+        memcpy(csb + (w + 6) * U, sB + (w + 6) * K, Ud);
+        memcpy(csb + (w + 7) * U, sB + (w + 7) * K, Ud);
     }
 }
 
@@ -192,7 +219,7 @@ void kernel_compute_intern(f64ro A, f64ro B, f64rw C, dim K) {
     dim KU = K/U;
     dim KV = K/V;
 
-    f64rw csb = prepare_csb();
+    f64rw csb = prepare_csb(K);
 
     for (size_t ku = 0; ku < KU; ++ku) {
         for (size_t kv = 0; kv < KV; ++kv) {
