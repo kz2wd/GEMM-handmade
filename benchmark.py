@@ -36,7 +36,8 @@ def main():
     trials = 5
     max_data = 100
     # sizes = [512]
-    sizes = [128, 256, 512, 1024] + list(range(1024 + 512, 4096 + 1, 512))
+    sizes = [2048]
+    # sizes = [128, 256, 512, 1024] + list(range(1024 + 512, 4096 + 1, 512))
     runs = []
     try:
         for version_name in version_names:

@@ -6,3 +6,8 @@ add_library(cgemm MODULE
 
 target_include_directories(cgemm PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+set_source_files_properties(
+    cgemm_kernel.c
+    PROPERTIES
+    COMPILE_OPTIONS "-fopt-info-optimized;-fopt-info-missed"
+)

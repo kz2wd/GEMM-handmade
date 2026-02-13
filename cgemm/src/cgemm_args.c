@@ -25,10 +25,10 @@ void PyGEMMArgs_dealloc(PyObject* o){
 PyObject* get_naive(PyObject* self, PyObject* args) {
 
     PyGEMMArgs* gemm_args;
-    int matrix_index; 
+    int matrix_index;
     int i;
     int j;
-    
+
     if (!PyArg_ParseTuple(args, "O!iii", &PyGEMMArgsType, &gemm_args, &matrix_index, &i, &j)) return NULL;
 
     double* target = gemm_args->A;
@@ -42,7 +42,7 @@ PyObject* get_naive(PyObject* self, PyObject* args) {
 }
 
 void init_mat(double* M, size_t K) {
- 
+
     double x = RAND_MAX / 100.0;
     for (size_t m = 0; m < K; ++m) {
         for (size_t n = 0; n < K; ++n) {
