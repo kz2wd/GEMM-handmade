@@ -13,8 +13,8 @@ target_compile_options(cgemm PRIVATE
     -mfma
     -march=native
     -O3
-    -fopt-info-optimized=opt_%b.txt
-    -fopt-info-missed=missed_%b.txt
+    -fopt-info-optimized
+    -fopt-info-missed
 )
 target_link_libraries(cgemm PRIVATE Python::Python)
 

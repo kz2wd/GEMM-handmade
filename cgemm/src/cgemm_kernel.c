@@ -57,63 +57,73 @@ typedef const double* const f64ro;
 typedef double* const f64rw;
 typedef const size_t dim;
 
-__m256d c00;
-__m256d c10;
-__m256d c01;
-__m256d c11;
-__m256d c02;
-__m256d c12;
-__m256d c03;
-__m256d c13;
+// __m256d c00;
+// __m256d c10;
+// __m256d c01;
+// __m256d c11;
+// __m256d c02;
+// __m256d c12;
+// __m256d c03;
+// __m256d c13;
 
-// Util func, should never be used
-static void load_kernel_block(f64rw kC,  dim K){
-    c00 = _mm256_load_pd(kC);
-    c10 = _mm256_load_pd(kC + 4);
+// // Util func, should never be used
+// static void load_kernel_block(f64rw kC,  dim K){
+//     c00 = _mm256_load_pd(kC);
+//     c10 = _mm256_load_pd(kC + 4);
 
-    c01 = _mm256_load_pd(kC + K);
-    c11 = _mm256_load_pd(kC + 4 + K);
+//     c01 = _mm256_load_pd(kC + K);
+//     c11 = _mm256_load_pd(kC + 4 + K);
 
-    c02 = _mm256_load_pd(kC + 2 * K);
-    c12 = _mm256_load_pd(kC + 4 + 2 * K);
+//     c02 = _mm256_load_pd(kC + 2 * K);
+//     c12 = _mm256_load_pd(kC + 4 + 2 * K);
 
-    c03 = _mm256_load_pd(kC + 3 * K);
-    c13 = _mm256_load_pd(kC + 4 + 3 * K);
-}
+//     c03 = _mm256_load_pd(kC + 3 * K);
+//     c13 = _mm256_load_pd(kC + 4 + 3 * K);
+// }
 
-static void prepare_kernel_block(){
-    c00 = _mm256_setzero_pd();
-    c10 = _mm256_setzero_pd();
+// static void prepare_kernel_block(){
+//     c00 = _mm256_setzero_pd();
+//     c10 = _mm256_setzero_pd();
 
-    c01 = _mm256_setzero_pd();
-    c11 = _mm256_setzero_pd();
+//     c01 = _mm256_setzero_pd();
+//     c11 = _mm256_setzero_pd();
 
-    c02 = _mm256_setzero_pd();
-    c12 = _mm256_setzero_pd();
+//     c02 = _mm256_setzero_pd();
+//     c12 = _mm256_setzero_pd();
 
-    c03 = _mm256_setzero_pd();
-    c13 = _mm256_setzero_pd();
-}
+//     c03 = _mm256_setzero_pd();
+//     c13 = _mm256_setzero_pd();
+// }
 
-static void store_kernel_block(f64rw kC,  dim K){
-    _mm256_store_pd(kC, c00);
-    _mm256_store_pd(kC + 4, c10);
+// static void store_kernel_block(f64rw kC,  dim K){
+//     _mm256_store_pd(kC, c00);
+//     _mm256_store_pd(kC + 4, c10);
 
-    _mm256_store_pd(kC + K, c01);
-    _mm256_store_pd(kC + 4 + K, c11);
+//     _mm256_store_pd(kC + K, c01);
+//     _mm256_store_pd(kC + 4 + K, c11);
 
-    _mm256_store_pd(kC + 2 * K, c02);
-    _mm256_store_pd(kC + 4 + 2 * K, c12);
+//     _mm256_store_pd(kC + 2 * K, c02);
+//     _mm256_store_pd(kC + 4 + 2 * K, c12);
 
-    _mm256_store_pd(kC + 3 * K, c03);
-    _mm256_store_pd(kC + 4 + 3 * K, c13);
+//     _mm256_store_pd(kC + 3 * K, c03);
+//     _mm256_store_pd(kC + 4 + 3 * K, c13);
 
-}
+// }
 
 
 // kA: (U, V) @ ssB: (U, U) = kC: (U, V)
 static void ckernel8x4(f64ro kA, f64ro ssB, f64rw kC, dim K){
+    __m256d c00 = _mm256_load_pd(kC);
+    __m256d c10 = _mm256_load_pd(kC + 4);
 
+    __m256d c01 = _mm256_load_pd(kC + K);
+    __m256d c11 = _mm256_load_pd(kC + 4 + K);
+
+    __m256d c02 = _mm256_load_pd(kC + 2 * K);
+    __m256d c12 = _mm256_load_pd(kC + 4 + 2 * K);
+
+    __m256d c03 = _mm256_load_pd(kC + 3 * K);
+    __m256d c13 = _mm256_load_pd(kC + 4 + 3 * K);
     for (size_t u = 0; u < U; ++u) {
 
         __m256d b00 = _mm256_load_pd(ssB + K * u);
@@ -135,6 +145,17 @@ static void ckernel8x4(f64ro kA, f64ro ssB, f64rw kC, dim K){
         c03 = _mm256_fmadd_pd(a030, b00, c03);
         c13 = _mm256_fmadd_pd(a030, b10, c13);
     }
+    _mm256_store_pd(kC, c00);
+    _mm256_store_pd(kC + 4, c10);
+
+    _mm256_store_pd(kC + K, c01);
+    _mm256_store_pd(kC + 4 + K, c11);
+
+    _mm256_store_pd(kC + 2 * K, c02);
+    _mm256_store_pd(kC + 4 + 2 * K, c12);
+
+    _mm256_store_pd(kC + 3 * K, c03);
+    _mm256_store_pd(kC + 4 + 3 * K, c13);
 
 }
 
@@ -167,7 +188,6 @@ static void sub_block(f64ro sA, f64ro sB, f64rw kC, dim K) {
 
 // full compute of a C block of shape (U, V) that depends on row of A (K, V) and column of B (U, K)
 static void c_block(f64ro rowA, f64ro colB, f64rw kC, dim K) {
-    prepare_kernel_block();
     dim KW = K/W;
     // Load C into registers
     for (size_t kw = 0; kw < KW; ++kw) {
@@ -179,7 +199,6 @@ static void c_block(f64ro rowA, f64ro colB, f64rw kC, dim K) {
         sub_block(sA, sB, kC, K);
 
     }
-    store_kernel_block(kC, K);
 }
 
 
