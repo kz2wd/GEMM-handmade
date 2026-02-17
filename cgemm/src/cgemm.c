@@ -6,6 +6,7 @@
 #include "cugemm_naive.h"
 #include "cgemm_kernel.h"
 #include "cgemm_block.h"
+#include "cgemm_blas.h"
 
 static int
 cgemm_module_exec(PyObject* m) {
@@ -28,7 +29,7 @@ static PyModuleDef_Slot cgemm_module_slots[] = {
 };
 
 
-static PyMethodDef 
+static PyMethodDef
 Methods[] = {
     {"naive_compute", naive_compute, METH_VARARGS, "naive cgemm run"},
     {"naive_acc_compute", naive_acc_compute, METH_VARARGS, "naive cgemm run accumulating over k"},
@@ -39,6 +40,7 @@ Methods[] = {
     {"aligned_memory_prepare", aligned_memory_prepare, METH_VARARGS, "aligned memory preparation"},
     {"kernel_compute", kernel_compute, METH_VARARGS, "kernel compute"},
     {"block_compute", block_compute, METH_VARARGS, "block compute"},
+    {"cblas_compute", cblas_compute, METH_VARARGS, "cblas reference"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -51,7 +53,7 @@ static struct PyModuleDef module = {
     .m_slots = cgemm_module_slots
 };
 
-PyMODINIT_FUNC 
+PyMODINIT_FUNC
 PyInit_cgemm(void) {
     return PyModuleDef_Init(&module);
 }

@@ -89,11 +89,12 @@ def plot_flops_cpu():
 
 
 def plot_smaller():
-    versions_to_plot = ["naive_c", "block_c", "kernel_c"]
+    versions_to_plot = ["naive_c", "block_c", "kernel_c", "cblas"]
     df = fetch_df(versions_to_plot)
     df["GFLOPS"] = df.apply(
         lambda row: (2 * row["size"] ** 3) / row["time"] * 1e-9, axis=1
     )
+    plt.figure(figsize=(12, 6), dpi=100)
     sns.stripplot(data=df, y="GFLOPS", x="size", hue="name", alpha=0.25, legend=None)
     sns.pointplot(
         data=df,
@@ -108,6 +109,9 @@ def plot_smaller():
     )
     plt.axhline(y=57.6, label="FP64 GFLOPS LIMIT")
     plt.title("Global GFLOPS")
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.subplots_adjust(right=0.65)
+    plt.grid(True)
     plt.show()
 
 

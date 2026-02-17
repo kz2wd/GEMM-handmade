@@ -20,7 +20,13 @@ target_link_options(cgemm PRIVATE
     -pg
 )
 
-target_link_libraries(cgemm PRIVATE Python::Python)
+find_package(BLAS REQUIRED)
+
+target_link_libraries(cgemm PRIVATE
+    Python::Python
+    BLAS::BLAS
+)
+
 set_target_properties(cgemm PROPERTIES
     PREFIX ""
     CUDA_SEPARABLE_COMPILATION ON

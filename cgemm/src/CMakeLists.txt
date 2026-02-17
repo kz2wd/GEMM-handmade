@@ -14,7 +14,12 @@ set_source_files_properties(
 
 add_executable(standalone_runner ${ALL_SRC_FILES})
 
-target_link_libraries(standalone_runner PRIVATE Python::Python)
+find_package(BLAS REQUIRED)
+
+target_link_libraries(standalone_runner PRIVATE
+    Python::Python
+
+)
 
 target_compile_options(standalone_runner PRIVATE
     -mavx2
@@ -26,4 +31,5 @@ target_compile_options(standalone_runner PRIVATE
 )
 target_link_options(standalone_runner PRIVATE
     -pg
+
 )
