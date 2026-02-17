@@ -62,14 +62,16 @@ typedef struct {
 
 
 
-static double* prepare_ccb(dim K) {
-    double* ccb = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * U * K);
-    return ccb;
+static double* prepare_csb(dim size) {
+    double* csb = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * size * U);
+    return csb;
 }
 
-static void free_ccb(double* ccb){
-    free(ccb);
+static void free_csb(double* csb){
+    free(csb);
 }
+
+
 
 static void sparse_copy_B(f64ro sB, f64rw csb, dim K) {
     dim Ud = U * sizeof(double);
@@ -201,6 +203,55 @@ static void c_block(f64ro rowA, f64ro colB, f64rw ccb, f64rw kC, dim K) {
 
 }
 
+static void partial_c_block(f64ro srA, f64ro csb, f64rw kC, dim K) {
+
+    // Load C into registers
+    ckernel core = load_kernel_block(kC, K);
+
+    ckernel8x4_csb(srA, csb, &core, K);
+
+    store_kernel_block(kC, &core, K);
+
+}
+
+
+void kernel_compute_intern_blocked(f64ro A, f64ro B, f64rw C, dim K) {
+    dim KU = K/U;
+    dim KV = K/V;
+    dim KW = K/W;
+
+
+    f64rw ccb = prepare_csb(K);
+    f64rw csb = prepare_csb(W);
+
+    for (size_t ku = 0; ku < KU; ++ku) {
+
+        // Column of B: (U, K)
+        f64ro colB = B + ku * U;
+        sparse_copy_B(colB, ccb, K);
+
+        for (size_t kw = 0; kw < KW; ++kw) {
+
+            f64ro scB = ccb + kw * W;
+
+            memcpy(csb, scB, sizeof(double) * W * U);
+
+            for (size_t kv = 0; kv < KV; ++kv) {
+
+                // kC: kernel size block of C: (U,V)
+                f64rw kC = C + ku * U + kv * V * K;
+
+                // Row of A: (K, V)
+                f64ro rowA = A + kv * V * K;
+                f64ro srA = rowA + kw * W;
+                partial_c_block(srA, csb, kC, K);
+            }
+        }
+    }
+
+    free_csb(ccb);
+    free_csb(csb);
+}
 
 // A @ B = C
 //       j ->
@@ -214,7 +265,7 @@ void kernel_compute_intern(f64ro A, f64ro B, f64rw C, dim K) {
     dim KU = K/U;
     dim KV = K/V;
 
-    f64rw ccb = prepare_ccb(K);
+    f64rw ccb = prepare_csb(K);
 
     for (size_t ku = 0; ku < KU; ++ku) {
 
@@ -232,7 +283,7 @@ void kernel_compute_intern(f64ro A, f64ro B, f64rw C, dim K) {
         }
     }
 
-    free_ccb(ccb);
+    free_csb(ccb);
 }
 
 PyObject* kernel_compute(PyObject* self, PyObject* args) {
@@ -247,7 +298,7 @@ PyObject* kernel_compute(PyObject* self, PyObject* args) {
     const size_t K = gemm_args->K;
 
 
-    kernel_compute_intern(A, B, C, K);
+    kernel_compute_intern_blocked(A, B, C, K);
 
     Py_INCREF(Py_None);
     return Py_None;

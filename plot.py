@@ -107,7 +107,7 @@ def plot_smaller():
         errorbar=None,
         dodge=True,
     )
-    plt.axhline(y=57.6, label="FP64 GFLOPS LIMIT")
+    plt.axhline(y=68.8, label="FP64 GFLOPS LIMIT")
     plt.title("Global GFLOPS")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.subplots_adjust(right=0.65)

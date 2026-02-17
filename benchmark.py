@@ -20,9 +20,9 @@ def main():
         # 'numpy_FP32',
         #   'loop_kmn',
         # 'block_c',
-        # "kernel_c",
+        "kernel_c",
         #'naive_acc_compute',
-        "cblas",
+        # "cblas",
     ]
 
     conn = sqlite3.connect("benchmarks.db")

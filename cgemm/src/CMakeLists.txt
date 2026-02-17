@@ -18,7 +18,7 @@ find_package(BLAS REQUIRED)
 
 target_link_libraries(standalone_runner PRIVATE
     Python::Python
-
+    BLAS::BLAS
 )
 
 target_compile_options(standalone_runner PRIVATE
