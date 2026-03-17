@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from matplotlib.typing import LineStyleType
 
 
 def fetch_df(versions_to_plot):
@@ -107,7 +108,9 @@ def plot_smaller():
         errorbar=None,
         dodge=True,
     )
-    plt.axhline(y=68.8, label="FP64 GFLOPS LIMIT")
+    plt.axhline(y=68.8, label="FP64 GFLOPS LIMIT Turbo mode")
+    plt.axhline(y=57.6, label="FP64 GFLOPS sustain mode", linestyle="--")
+
     plt.title("Global GFLOPS")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.subplots_adjust(right=0.65)

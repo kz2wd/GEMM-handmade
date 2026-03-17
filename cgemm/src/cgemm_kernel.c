@@ -220,21 +220,24 @@ void kernel_compute_intern_blocked(f64ro A, f64ro B, f64rw C, dim K) {
     dim KV = K/V;
     dim KW = K/W;
 
-
-    f64rw ccb = prepare_csb(K);
+    // f64rw ccb = prepare_csb(K);
     f64rw csb = prepare_csb(W);
+
 
     for (size_t ku = 0; ku < KU; ++ku) {
 
         // Column of B: (U, K)
         f64ro colB = B + ku * U;
-        sparse_copy_B(colB, ccb, K);
+        // sparse_copy_B(colB, ccb, K);
 
         for (size_t kw = 0; kw < KW; ++kw) {
 
-            f64ro scB = ccb + kw * W;
+            // f64ro scB = ccb + kw * W;
 
-            memcpy(csb, scB, sizeof(double) * W * U);
+            // memcpy(csb, scB, sizeof(double) * W * U);
+
+            // f64ro csb = ccb + kw * W;
+            sparse_copy_B(colB + kw * W, csb, W);
 
             for (size_t kv = 0; kv < KV; ++kv) {
 
@@ -249,7 +252,8 @@ void kernel_compute_intern_blocked(f64ro A, f64ro B, f64rw C, dim K) {
         }
     }
 
-    free_csb(ccb);
+
+    // free_csb(ccb);
     free_csb(csb);
 }
 
@@ -298,7 +302,8 @@ PyObject* kernel_compute(PyObject* self, PyObject* args) {
     const size_t K = gemm_args->K;
 
 
-    kernel_compute_intern_blocked(A, B, C, K);
+    kernel_compute_intern(A, B, C, K);
+    // kernel_compute_intern_blocked(A, B, C, K);
 
     Py_INCREF(Py_None);
     return Py_None;

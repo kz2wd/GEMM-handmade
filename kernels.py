@@ -168,9 +168,7 @@ kernels = {
         "blocked c", "FP64", "CPU", "c", cgemm.block_compute, cnaive_layout
     ),
     "kernel_c": GEMM(
-        "kernel c v14", "FP64", "CPU", "c", cgemm.kernel_compute, caligned_layout
+        "kernel c v17", "FP64", "CPU", "c", cgemm.kernel_compute, caligned_layout
     ),
-    "cblas": GEMM(
-        "cblas netlib", "FP64", "CPU", "c", cgemm.cblas_compute, caligned_layout
-    ),
+    "cblas": GEMM("OpenBLAS", "FP64", "CPU", "c", cgemm.cblas_compute, caligned_layout),
 }

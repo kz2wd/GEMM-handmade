@@ -9,7 +9,7 @@ from kernels import benchmark, check, kernels
 def main():
 
     version_names = [
-        #   'numpy',
+        # "numpy",
         #   'naive_py', 'numpy_naive',
         #   'loop_kmn', 'loop_knm', 'loop_mkn', 'loop_mnk', 'loop_nkm', 'loop_nmk',
         #   'continuous_memory',
@@ -34,7 +34,7 @@ def main():
 
     warmup = 0  # check is enough of a warmup
     do_check = True
-    trials = 5
+    trials = 10
     max_data = 100
     # sizes = [512]
     # sizes = [2048]

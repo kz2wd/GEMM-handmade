@@ -20,11 +20,11 @@ target_link_options(cgemm PRIVATE
     -pg
 )
 
-find_package(BLAS REQUIRED)
+find_library(OPENBLAS_LIB openblas)
 
 target_link_libraries(cgemm PRIVATE
     Python::Python
-    BLAS::BLAS
+    ${OPENBLAS_LIB}
 )
 
 set_target_properties(cgemm PROPERTIES
