@@ -20,9 +20,10 @@ def main():
         # 'numpy_FP32',
         #   'loop_kmn',
         # 'block_c',
-        "kernel_c",
+        # "kernel_c",
         #'naive_acc_compute',
         # "cblas",
+        "simple",
     ]
 
     conn = sqlite3.connect("benchmarks.db")
@@ -32,13 +33,19 @@ def main():
     except pd.errors.DatabaseError:
         df = None
 
-    warmup = 0  # check is enough of a warmup
+    warmups = [100, 50, 25, 10, 5, 3]
+
+    def get_warmup(i):
+        if i >= len(warmups):
+            return warmups[-1]
+        return warmups[i]
+
     do_check = True
     trials = 10
-    max_data = 100
+    max_data = 1000
     # sizes = [512]
     # sizes = [2048]
-    sizes = [256, 512, 1024] + list(range(1024 + 512, 4096 + 1, 512))
+    sizes = [128, 256, 512, 1024] + list(range(1024 + 512, 4096 + 1, 512))
     runs = []
     try:
         for version_name in version_names:
@@ -50,7 +57,7 @@ def main():
                     continue
                 if do_check:
                     check(version)
-                for K in sizes:
+                for i, K in enumerate(sizes):
                     if df is not None:
                         size_filtered_df = df[df["size"] == K]
                         if (
@@ -64,18 +71,18 @@ def main():
                                 end=" ",
                             )
                             continue
-
+                    warmup = get_warmup(i)
                     for _ in range(warmup):
                         benchmark(version, K)
 
                     for i in (pbar := tqdm(range(trials))):
                         pbar.set_description(f"Processing {version.name}:{K}")
-
+                        time = benchmark(version, K)
                         runs.append(
                             {
                                 "version": version_name,
                                 "name": version.name,
-                                "time": benchmark(version, K),
+                                "time": time,
                                 "size": K,
                                 "precision": version.precision,
                                 "device": version.device,

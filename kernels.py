@@ -80,7 +80,7 @@ def check_numpy(_):
 
 def check_c(version: GEMM):
     # K = 128
-    K = 256
+    K = 512
     cgemm_args = version.layout.prepare(K)
     version.run(cgemm_args)
     A = np.zeros((K, K))
@@ -168,7 +168,10 @@ kernels = {
         "blocked c", "FP64", "CPU", "c", cgemm.block_compute, cnaive_layout
     ),
     "kernel_c": GEMM(
-        "kernel c v17", "FP64", "CPU", "c", cgemm.kernel_compute, caligned_layout
+        "kernel c 22", "FP64", "CPU", "c", cgemm.kernel_compute, caligned_layout
     ),
     "cblas": GEMM("OpenBLAS", "FP64", "CPU", "c", cgemm.cblas_compute, caligned_layout),
+    "simple": GEMM(
+        "Simple C version", "FP64", "CPU", "c", cgemm.simple_compute, caligned_layout
+    ),
 }

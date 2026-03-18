@@ -7,6 +7,7 @@
 #include "cgemm_kernel.h"
 #include "cgemm_block.h"
 #include "cgemm_blas.h"
+#include "cgemm_simple.h"
 
 static int
 cgemm_module_exec(PyObject* m) {
@@ -41,6 +42,7 @@ Methods[] = {
     {"kernel_compute", kernel_compute, METH_VARARGS, "kernel compute"},
     {"block_compute", block_compute, METH_VARARGS, "block compute"},
     {"cblas_compute", cblas_compute, METH_VARARGS, "cblas reference"},
+    {"simple_compute", simple_compute, METH_VARARGS, "Simplest code but fast"},
     {NULL, NULL, 0, NULL}
 };
 

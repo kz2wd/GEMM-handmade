@@ -30,7 +30,7 @@ Constraints:
 */
 #define U 8
 #define V 4
-#define W 256
+#define W 128
 
 
 PyObject* aligned_memory_prepare(PyObject* self, PyObject* args) {
@@ -62,6 +62,7 @@ typedef struct {
 
 
 
+// Continuous Sub B
 static double* prepare_csb(dim size) {
     double* csb = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * size * U);
     return csb;
@@ -104,6 +105,24 @@ static void sparse_copy_B(f64ro sB, f64rw csb, dim K) {
         memcpy(csb + (w - 7) * U, sB + (w - 7) * K, Ud);
     }
 }
+
+static void sparse_copy_B_2(f64ro sB, f64rw csb, dim K) {
+    dim Ud = U * sizeof(double);
+
+    for (int w = K - 1; w >= 0; w -= 1) {
+        __builtin_prefetch(sB + (w - 0) * K, 0, 3);
+        csb[(w - 0) * U + 0] = sB[(w - 0) * K + 0];
+        csb[(w - 0) * U + 1] = sB[(w - 0) * K + 1];
+        csb[(w - 0) * U + 2] = sB[(w - 0) * K + 2];
+        csb[(w - 0) * U + 3] = sB[(w - 0) * K + 3];
+        csb[(w - 0) * U + 4] = sB[(w - 0) * K + 4];
+        csb[(w - 0) * U + 5] = sB[(w - 0) * K + 5];
+        csb[(w - 0) * U + 6] = sB[(w - 0) * K + 6];
+        csb[(w - 0) * U + 7] = sB[(w - 0) * K + 7];
+
+    }
+}
+
 
 
 static ckernel load_kernel_block(f64rw kC, dim K){
@@ -182,8 +201,53 @@ static void ckernel8x4_csb(f64ro srA, f64ro csb, ckernel* core, dim K){
     }
 }
 
+
+static void ckernel8x4_csb_unrolled(f64ro srA, f64ro csb, ckernel* core, dim K){
+
+    for (size_t w = 0; w < W; w+=2) {
+
+        __m256d b00 = _mm256_load_pd(csb + w * U);
+        __m256d b10 = _mm256_load_pd(csb + 4 + w * U);
+
+        __m256d a000 =_mm256_broadcast_sd(srA + w);
+        core->c00 = _mm256_fmadd_pd(a000, b00, core->c00);
+        core->c10 = _mm256_fmadd_pd(a000, b10, core->c10);
+
+        __m256d a010 =_mm256_broadcast_sd(srA + K + w);
+        core->c01 = _mm256_fmadd_pd(a010, b00, core->c01);
+        core->c11 = _mm256_fmadd_pd(a010, b10, core->c11);
+
+        __m256d a020 =_mm256_broadcast_sd(srA + 2 * K + w);
+        core->c02 = _mm256_fmadd_pd(a020, b00, core->c02);
+        core->c12 = _mm256_fmadd_pd(a020, b10, core->c12);
+
+        __m256d a030 =_mm256_broadcast_sd(srA + 3 * K + w);
+        core->c03 = _mm256_fmadd_pd(a030, b00, core->c03);
+        core->c13 = _mm256_fmadd_pd(a030, b10, core->c13);
+
+        __m256d b20 = _mm256_load_pd(csb + (w + 1) * U);
+        __m256d b30 = _mm256_load_pd(csb + 4 + (w + 1) * U);
+
+        __m256d a040 =_mm256_broadcast_sd(srA + (w + 1));
+        core->c00 = _mm256_fmadd_pd(a040, b20, core->c00);
+        core->c10 = _mm256_fmadd_pd(a040, b30, core->c10);
+
+        __m256d a050 =_mm256_broadcast_sd(srA + K + (w + 1));
+        core->c01 = _mm256_fmadd_pd(a050, b20, core->c01);
+        core->c11 = _mm256_fmadd_pd(a050, b30, core->c11);
+
+        __m256d a060 =_mm256_broadcast_sd(srA + 2 * K + (w + 1));
+        core->c02 = _mm256_fmadd_pd(a060, b20, core->c02);
+        core->c12 = _mm256_fmadd_pd(a060, b30, core->c12);
+
+        __m256d a070 =_mm256_broadcast_sd(srA + 3 * K + (w + 1));
+        core->c03 = _mm256_fmadd_pd(a070, b20, core->c03);
+        core->c13 = _mm256_fmadd_pd(a070, b30, core->c13);
+    }
+}
+
 // full compute of a C block of shape (U, V) that depends on row of A (K, V) and column of B (U, K)
-static void c_block(f64ro rowA, f64ro colB, f64rw ccb, f64rw kC, dim K) {
+static void c_block(f64ro rowA, f64ro ccb, f64rw kC, dim K) {
     dim KW = K/W;
 
     // Load C into registers
@@ -197,11 +261,13 @@ static void c_block(f64ro rowA, f64ro colB, f64rw ccb, f64rw kC, dim K) {
 
         // ckernel8x4(srA, scB, kC, K);
         ckernel8x4_csb(srA, csb, &core, K);
+        // ckernel8x4_csb_unrolled(srA, csb, &core, K);
     }
 
     store_kernel_block(kC, &core, K);
 
 }
+
 
 static void partial_c_block(f64ro srA, f64ro csb, f64rw kC, dim K) {
 
@@ -214,6 +280,63 @@ static void partial_c_block(f64ro srA, f64ro csb, f64rw kC, dim K) {
 
 }
 
+
+// A @ B = C
+//       j ->
+//     i B B B
+//   K | B B B
+//    \/ B B B
+// A A A C C C
+// A A A C C C
+// A A A C C C
+void kernel_compute_intern(f64ro A, f64ro B, f64rw C, dim K) {
+    dim KU = K/U;
+    dim KV = K/V;
+
+    // Continuous Column B
+    f64rw ccb = prepare_csb(K);
+
+    for (size_t ku = 0; ku < KU; ++ku) {
+
+        // todo: extract B sublock so that it becomes continuous
+        // Column of B: (U, K)
+        f64ro colB = B + ku * U;
+        sparse_copy_B(colB, ccb, K);
+        // sparse_copy_B_2(colB, ccb, K);
+        for (size_t kv = 0; kv < KV; ++kv) {
+            // kC: kernel size block of C: (U,V)
+            f64rw kC = C + ku * U + kv * V * K;
+
+            // Row of A: (K, V)
+            f64ro rowA = A + kv * V * K;
+            c_block(rowA, ccb, kC, K);
+        }
+    }
+
+    free_csb(ccb);
+}
+
+
+PyObject* kernel_compute(PyObject* self, PyObject* args) {
+
+    PyGEMMArgs* gemm_args;
+
+    if (!PyArg_ParseTuple(args, "O!", &PyGEMMArgsType, &gemm_args)) return NULL;
+
+    double * A = gemm_args->A;
+    double * B = gemm_args->B;
+    double * C = gemm_args->C;
+    const size_t K = gemm_args->K;
+
+
+    kernel_compute_intern(A, B, C, K);
+
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+// NAUGHTY CODE CORNER
 
 void kernel_compute_intern_blocked(f64ro A, f64ro B, f64rw C, dim K) {
     dim KU = K/U;
@@ -257,19 +380,80 @@ void kernel_compute_intern_blocked(f64ro A, f64ro B, f64rw C, dim K) {
     free_csb(csb);
 }
 
-// A @ B = C
-//       j ->
-//     i B B B
-//   K | B B B
-//    \/ B B B
-// A A A C C C
-// A A A C C C
-// A A A C C C
-void kernel_compute_intern(f64ro A, f64ro B, f64rw C, dim K) {
+
+// Continuous Sub A
+static double* prepare_csa(dim size) {
+    double* csa = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * size * V);
+    return csa;
+}
+
+static void free_csa(double* csa){
+    free(csa);
+}
+
+
+static void pack_csa(f64ro sA, f64rw csa, dim K) {
+    for (int k = 0; k < K; ++k) {
+        f64rw dest = csa + k * 4;
+        f64ro src = sA + k;
+
+        dest[0] = src[0 * K];
+        dest[1] = src[1 * K];
+        dest[2] = src[2 * K];
+        dest[3] = src[3 * K];
+    }
+}
+static void ckernel8x4_csb_csa(f64ro csa, f64ro csb, ckernel* core, dim K){
+
+    for (size_t w = 0; w < W; ++w) {
+
+        __m256d b00 = _mm256_load_pd(csb + w * U);
+        __m256d b10 = _mm256_load_pd(csb + 4 + w * U);
+
+        __m256d a000 =_mm256_broadcast_sd(csa + w);
+        core->c00 = _mm256_fmadd_pd(a000, b00, core->c00);
+        core->c10 = _mm256_fmadd_pd(a000, b10, core->c10);
+
+        __m256d a010 =_mm256_broadcast_sd(csa + w + 1);
+        core->c01 = _mm256_fmadd_pd(a010, b00, core->c01);
+        core->c11 = _mm256_fmadd_pd(a010, b10, core->c11);
+
+        __m256d a020 =_mm256_broadcast_sd(csa + w + 2);
+        core->c02 = _mm256_fmadd_pd(a020, b00, core->c02);
+        core->c12 = _mm256_fmadd_pd(a020, b10, core->c12);
+
+        __m256d a030 =_mm256_broadcast_sd(csa + w + 3);
+        core->c03 = _mm256_fmadd_pd(a030, b00, core->c03);
+        core->c13 = _mm256_fmadd_pd(a030, b10, core->c13);
+    }
+}
+// C block with all source packed
+static void c_block_ap(f64ro cra, f64ro ccb, f64rw kC, dim K) {
+    dim KW = K/W;
+
+    // Load C into registers
+    ckernel core = prepare_kernel_block();
+
+    for (size_t kw = 0; kw < KW; ++kw) {
+        // sub row of A: (W, V)
+        f64ro srA = cra + kw * W;
+        // sub col of B: (X, U)
+        f64ro csb = ccb + kw * W;
+
+        ckernel8x4_csb_csa(srA, csb, &core, K);
+    }
+
+    store_kernel_block(kC, &core, K);
+
+}
+void kernel_compute_intern_ABpacked(f64ro A, f64ro B, f64rw C, dim K) {
     dim KU = K/U;
     dim KV = K/V;
 
+    // Continuous Column B
     f64rw ccb = prepare_csb(K);
+    // Continuous Row A (Continuous for kernel perspective)
+    f64rw cra = prepare_csa(K);
 
     for (size_t ku = 0; ku < KU; ++ku) {
 
@@ -280,31 +464,13 @@ void kernel_compute_intern(f64ro A, f64ro B, f64rw C, dim K) {
         for (size_t kv = 0; kv < KV; ++kv) {
             // kC: kernel size block of C: (U,V)
             f64rw kC = C + ku * U + kv * V * K;
-
             // Row of A: (K, V)
             f64ro rowA = A + kv * V * K;
-            c_block(rowA, colB, ccb, kC, K);
+            pack_csa(rowA, cra, K);
+            c_block_ap(cra, ccb, kC, K);
         }
     }
 
     free_csb(ccb);
-}
-
-PyObject* kernel_compute(PyObject* self, PyObject* args) {
-
-    PyGEMMArgs* gemm_args;
-
-    if (!PyArg_ParseTuple(args, "O!", &PyGEMMArgsType, &gemm_args)) return NULL;
-
-    double * A = gemm_args->A;
-    double * B = gemm_args->B;
-    double * C = gemm_args->C;
-    const size_t K = gemm_args->K;
-
-
-    kernel_compute_intern(A, B, C, K);
-    // kernel_compute_intern_blocked(A, B, C, K);
-
-    Py_INCREF(Py_None);
-    return Py_None;
+    free_csa(cra);
 }
