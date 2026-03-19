@@ -13,6 +13,8 @@
 // 64 alignement to fit full cache line
 #define ALIGNEMENT 64
 
+// Prefetech distance
+#define prefetch_D 64
 /*
 C: U*V
 A: W*V
@@ -73,56 +75,19 @@ static void free_csb(double* csb){
 }
 
 
-
 static void sparse_copy_B(f64ro sB, f64rw csb, dim K) {
     dim Ud = U * sizeof(double);
-
-    __builtin_prefetch(sB + (K - 1 - 0) * K, 0, 3);
-    __builtin_prefetch(sB + (K - 1 - 1) * K, 0, 3);
-    __builtin_prefetch(sB + (K - 1 - 2) * K, 0, 3);
-    __builtin_prefetch(sB + (K - 1 - 3) * K, 0, 3);
-    __builtin_prefetch(sB + (K - 1 - 4) * K, 0, 3);
-    __builtin_prefetch(sB + (K - 1 - 5) * K, 0, 3);
-    __builtin_prefetch(sB + (K - 1 - 6) * K, 0, 3);
-    __builtin_prefetch(sB + (K - 1 - 7) * K, 0, 3);
-
-    for (int w = K - 1; w >= 0; w -= 8) {
-        __builtin_prefetch(sB + (w - 0 - 8) * K, 0, 3);
-        __builtin_prefetch(sB + (w - 1 - 8) * K, 0, 3);
-        __builtin_prefetch(sB + (w - 2 - 8) * K, 0, 3);
-        __builtin_prefetch(sB + (w - 3 - 8) * K, 0, 3);
-        __builtin_prefetch(sB + (w - 4 - 8) * K, 0, 3);
-        __builtin_prefetch(sB + (w - 5 - 8) * K, 0, 3);
-        __builtin_prefetch(sB + (w - 6 - 8) * K, 0, 3);
-        __builtin_prefetch(sB + (w - 7 - 8) * K, 0, 3);
+    for (int w = K - 1; w >= 0; w -= 4) {
+        __builtin_prefetch(sB + (w - 0 - prefetch_D) * K, 0, 3);
+        __builtin_prefetch(sB + (w - 1 - prefetch_D) * K, 0, 3);
+        __builtin_prefetch(sB + (w - 2 - prefetch_D) * K, 0, 3);
+        __builtin_prefetch(sB + (w - 3 - prefetch_D) * K, 0, 3);
         memcpy(csb + (w - 0) * U, sB + (w - 0) * K, Ud);
         memcpy(csb + (w - 1) * U, sB + (w - 1) * K, Ud);
         memcpy(csb + (w - 2) * U, sB + (w - 2) * K, Ud);
         memcpy(csb + (w - 3) * U, sB + (w - 3) * K, Ud);
-        memcpy(csb + (w - 4) * U, sB + (w - 4) * K, Ud);
-        memcpy(csb + (w - 5) * U, sB + (w - 5) * K, Ud);
-        memcpy(csb + (w - 6) * U, sB + (w - 6) * K, Ud);
-        memcpy(csb + (w - 7) * U, sB + (w - 7) * K, Ud);
     }
 }
-
-static void sparse_copy_B_2(f64ro sB, f64rw csb, dim K) {
-    dim Ud = U * sizeof(double);
-
-    for (int w = K - 1; w >= 0; w -= 1) {
-        __builtin_prefetch(sB + (w - 0) * K, 0, 3);
-        csb[(w - 0) * U + 0] = sB[(w - 0) * K + 0];
-        csb[(w - 0) * U + 1] = sB[(w - 0) * K + 1];
-        csb[(w - 0) * U + 2] = sB[(w - 0) * K + 2];
-        csb[(w - 0) * U + 3] = sB[(w - 0) * K + 3];
-        csb[(w - 0) * U + 4] = sB[(w - 0) * K + 4];
-        csb[(w - 0) * U + 5] = sB[(w - 0) * K + 5];
-        csb[(w - 0) * U + 6] = sB[(w - 0) * K + 6];
-        csb[(w - 0) * U + 7] = sB[(w - 0) * K + 7];
-
-    }
-}
-
 
 
 static ckernel load_kernel_block(f64rw kC, dim K){

@@ -4,9 +4,15 @@
 #include "cgemm_kernel.h"
 #include "cgemm_args.h"
 
+#define prefetch_D 64
+#define ALIGNEMENT 64
+#define U 8
+#define V 4
+#define W 128
+
 int main(int argc, char** argv){
 
-    size_t K = 2028;
+    size_t K = 4096 + 2048;
 
     double* A = (double *) aligned_alloc(64, sizeof(double) * K * K);
     double* B = (double *) aligned_alloc(64, sizeof(double) * K * K);
