@@ -90,8 +90,7 @@ def plot_flops_cpu():
 
 
 def plot_smaller():
-    # versions_to_plot = ["naive_c", "block_c", "kernel_c", "cblas"]
-    versions_to_plot = ["naive_c", "simple", "cblas"]
+    versions_to_plot = ["kernel_c", "cblas"]
     df = fetch_df(versions_to_plot)
     df["GFLOPS"] = df.apply(
         lambda row: (2 * row["size"] ** 3) / row["time"] * 1e-9, axis=1
@@ -109,6 +108,7 @@ def plot_smaller():
         errorbar=None,
         dodge=True,
     )
+    plt.ylim([0, 70])
     plt.axhline(y=68.8, label="FP64 GFLOPS LIMIT Turbo mode")
     plt.axhline(y=57.6, label="FP64 GFLOPS sustain mode", linestyle="--")
 

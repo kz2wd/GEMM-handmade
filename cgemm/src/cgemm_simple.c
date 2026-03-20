@@ -31,31 +31,31 @@ static void packB(f64ro sB, f64rw csb, dim K) {
 // Lastly, we go through A along m k but B along n k so there is an extra axis which prevents the
 // compiler from doing the kernel automatically, I believe.
 void simple_compute_intern(f64ro A, f64ro B, f64rw C, dim K) {
-    dim KW = K/W;
-    f64rw packedB = (double *) aligned_alloc(64, sizeof(double) * W * U);
+    // dim KW = K/W;
+    // f64rw packedB = (double *) aligned_alloc(64, sizeof(double) * W * U);
 
-    for (size_t kw = 0; kw < KW; ++kw) {
-        for (size_t mw = 0; mw < KW; ++mw) {
-            for (size_t nw = 0; nw < KW; ++nw) {
-                packB()
+    // for (size_t kw = 0; kw < KW; ++kw) {
+    //     for (size_t mw = 0; mw < KW; ++mw) {
+    //         for (size_t nw = 0; nw < KW; ++nw) {
+    //             packB()
 
-                for (size_t mm = 0; mm < W; ++mm) {
-                    for (size_t nn = 0; nn < W; nn += 4) {
-                        for (size_t kk = 0; kk < W; ++kk) {
-                            dim k = kw * W + kk;
-                            dim m = mw * W + mm;
-                            dim n = nw * W + nn;
-                            at(C, m, n + 0) += at(A, m, k) * packedB[kk], n + 0;
-                            at(C, m, n + 1) += at(A, m, k) * packedB, n + 1;
-                            at(C, m, n + 2) += at(A, m, k) * packedB, n + 2;
-                            at(C, m, n + 3) += at(A, m, k) * packedB, n + 3;
+    //             for (size_t mm = 0; mm < W; ++mm) {
+    //                 for (size_t nn = 0; nn < W; nn += 4) {
+    //                     for (size_t kk = 0; kk < W; ++kk) {
+    //                         dim k = kw * W + kk;
+    //                         dim m = mw * W + mm;
+    //                         dim n = nw * W + nn;
+    //                         at(C, m, n + 0) += at(A, m, k) * packedB[kk], n + 0;
+    //                         at(C, m, n + 1) += at(A, m, k) * packedB, n + 1;
+    //                         at(C, m, n + 2) += at(A, m, k) * packedB, n + 2;
+    //                         at(C, m, n + 3) += at(A, m, k) * packedB, n + 3;
 
-                        }
-                    }
-                }
-            }
-        }
-    }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 
