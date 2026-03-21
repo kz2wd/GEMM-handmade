@@ -80,8 +80,8 @@ def check_numpy(_):
 
 def check_c(version: GEMM):
     # K = 128
-    # K = 512
-    K = 1024
+    K = 512
+    # K = 1024
     cgemm_args = version.layout.prepare(K)
     version.run(cgemm_args)
     A = np.zeros((K, K))

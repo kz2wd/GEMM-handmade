@@ -39,14 +39,14 @@ Constraints:
 PyObject* aligned_memory_prepare(PyObject* self, PyObject* args) {
     size_t K;
     if (!PyArg_ParseTuple(args, "n", &K)) return NULL;
-
+    K = 1023;
     PyGEMMArgs *gemm_args;
     gemm_args = (PyGEMMArgs *) PyGEMMArgsType.tp_alloc(&PyGEMMArgsType, 0);
-
     gemm_args->A = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * K * K);
     gemm_args->B = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * K * K);
     gemm_args->C = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * K * K);
     gemm_args->K = K;
+
 
     init_mat(gemm_args->A, K);
     init_mat(gemm_args->B, K);
@@ -323,8 +323,8 @@ static void c_block_ld(f64ro rowA, dim lda, f64ro ccb, f64rw kC, dim ldc, dim K)
     dim KW = K/W;
 
     // Load C into registers
-    // ckernel core = load_kernel_block_ld(kC, ldc);
-    ckernel core = prepare_kernel_block();
+    ckernel core = load_kernel_block_ld(kC, ldc);
+    // ckernel core = prepare_kernel_block();
 
     for (size_t kw = 0; kw < KW; ++kw) {
         // sub row of A: (W, V)
@@ -444,11 +444,36 @@ void kernel_compute_intern_ld(f64ro A, dim lda, f64ro B, dim ldb, f64rw C, dim l
 }
 
 void kernel_compute_intern_master(f64ro A, f64ro B, f64rw C, dim K) {
-    dim D = 1024;
-    kernel_compute_intern_ld(A, K, B, K, C, K, D);
-    // kernel_compute_intern_ld(A + D, K, B + D, K, C + D, K, D);
-    // kernel_compute_intern_ld(A + D * K, K, B + D * K, K, C + D * K, K, D);
-    // kernel_compute_intern_ld(A + D + D * K, K, B + D + D * K, K, C + D + D * K, K, D);
+    dim D = 256;
+
+    f64ro A00 = A;
+    f64ro A01 = A + D;
+    f64ro A10 = A + D * K;
+    f64ro A11 = A + D + D * K;
+
+    f64ro B00 = B;
+    f64ro B01 = B + D;
+    f64ro B10 = B + D * K;
+    f64ro B11 = B + D + D * K;
+
+    f64rw C00 = C;
+    f64rw C01 = C + D;
+    f64rw C10 = C + D * K;
+    f64rw C11 = C + D + D * K;
+
+    kernel_compute_intern_ld(A00, K, B00, K, C00, K, 512);
+
+    // kernel_compute_intern_ld(A00, K, B00, K, C00, K, D);
+    // kernel_compute_intern_ld(A01, K, B10, K, C00, K, D);
+
+    // kernel_compute_intern_ld(A00, K, B01, K, C01, K, D);
+    // kernel_compute_intern_ld(A01, K, B11, K, C01, K, D);
+
+    // kernel_compute_intern_ld(A10, K, B00, K, C10, K, D);
+    // kernel_compute_intern_ld(A11, K, B10, K, C10, K, D);
+
+    // kernel_compute_intern_ld(A10, K, B01, K, C11, K, D);
+    // kernel_compute_intern_ld(A11, K, B11, K, C11, K, D);
 }
 
 
