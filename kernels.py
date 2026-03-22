@@ -50,9 +50,6 @@ class GEMM:
     layout: DataLayout
 
 
-epsilon = 1e-6
-
-
 def naive_benchmark(version: GEMM, S):
     A, B, C = version.layout.prepare(S, S, S)
 
@@ -80,8 +77,8 @@ def check_numpy(_):
 
 def check_c(version: GEMM):
     # K = 128
-    K = 512
-    # K = 1024
+    # K = 512
+    K = 1024
     cgemm_args = version.layout.prepare(K)
     version.run(cgemm_args)
     A = np.zeros((K, K))
@@ -94,15 +91,18 @@ def check_c(version: GEMM):
     error = 0
     for i in range(K):
         for j in range(K):
-            error += C[i, j] - cgemm.get_naive(cgemm_args, 2, i, j)
+            error = max(error, abs(C[i, j] - cgemm.get_naive(cgemm_args, 2, i, j)))
     return error
+
+
+epsilon = 1e-6
 
 
 def check(version: GEMM):
     error = version.layout.check(version)
     if error > epsilon:
         raise RuntimeError(
-            f"Version [{version.name}] failed with an error of {error:.5f}"
+            f"Version [{version.name}] failed with an error of {error:.12f}"
         )
     else:
         print(f"Version [{version.name}] is performing correctly")
@@ -169,7 +169,7 @@ kernels = {
         "blocked c", "FP64", "CPU", "c", cgemm.block_compute, cnaive_layout
     ),
     "kernel_c": GEMM(
-        "kernel c 28", "FP64", "CPU", "c", cgemm.kernel_compute, caligned_layout
+        "kernel c 30", "FP64", "CPU", "c", cgemm.kernel_compute, caligned_layout
     ),
     "cblas": GEMM("OpenBLAS", "FP64", "CPU", "c", cgemm.cblas_compute, caligned_layout),
     "simple": GEMM(

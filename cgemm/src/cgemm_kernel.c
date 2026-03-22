@@ -39,7 +39,6 @@ Constraints:
 PyObject* aligned_memory_prepare(PyObject* self, PyObject* args) {
     size_t K;
     if (!PyArg_ParseTuple(args, "n", &K)) return NULL;
-    K = 1023;
     PyGEMMArgs *gemm_args;
     gemm_args = (PyGEMMArgs *) PyGEMMArgsType.tp_alloc(&PyGEMMArgsType, 0);
     gemm_args->A = (double *) aligned_alloc(ALIGNEMENT, sizeof(double) * K * K);
@@ -78,7 +77,7 @@ static void free_csb(double* csb){
 
 static void sparse_copy_B(f64ro sB, f64rw csb, dim K) {
     dim Ud = U * sizeof(double);
-    for (int w = K - 1; w >= 0; w -= 4) {
+    for (int w = K - 1; w >= 3; w -= 4) {
         __builtin_prefetch(sB + (w - 0 - prefetch_D) * K, 0, 3);
         __builtin_prefetch(sB + (w - 1 - prefetch_D) * K, 0, 3);
         __builtin_prefetch(sB + (w - 2 - prefetch_D) * K, 0, 3);
@@ -296,7 +295,7 @@ static void c_block(f64ro rowA, f64ro ccb, f64rw kC, dim K) {
         // sub row of A: (W, V)
         f64ro srA = rowA + kw * W;
         // sub col of B: (X, U)
-        f64ro csb = ccb + kw * W;
+        f64ro csb = ccb + kw * W * U;
 
         // ckernel8x4(srA, scB, kC, K);
         ckernel8x4_csb(srA, csb, &core, K);
@@ -330,7 +329,7 @@ static void c_block_ld(f64ro rowA, dim lda, f64ro ccb, f64rw kC, dim ldc, dim K)
         // sub row of A: (W, V)
         f64ro srA = rowA + kw * W;
         // sub col of B: (X, U)
-        f64ro csb = ccb + kw * W;
+        f64ro csb = ccb + kw * W * U;
 
         // ckernel8x4(srA, scB, kC, K);
         ckernel8x4_csb_ld(srA, lda, csb, &core, K);
@@ -382,19 +381,21 @@ void kernel_compute_intern_blocked(f64ro A, f64ro B, f64rw C, dim K) {
     dim KU = K/U;
     dim KV = K/V;
     dim KX = K/X;
-    f64rw csb = prepare_csb(X);
+    f64rw ccb = prepare_csb(K);
+    // f64rw csb = prepare_csb(X);
 
-    for (size_t kx = 0; kx < KX; ++kx) {
-        for (size_t ku = 0; ku < KU; ++ku) {
-            // Column of B: (U, K)
-            f64ro colB = B + ku * U;
+    for (size_t ku = 0; ku < KU; ++ku) {
+        // Column of B: (U, K)
+        f64ro colB = B + ku * U;
 
-            sparse_copy_B(colB + kx * X, csb, X);
+        sparse_copy_B(colB, ccb, K);
 
-            for (size_t kv = 0; kv < KV; ++kv) {
+        for (size_t kv = 0; kv < KV; ++kv) {
 
+            for (size_t kx = 0; kx < KX; ++kx) {
 
-                // f64ro csb = ccb + kx * X;
+                f64ro csb = ccb + kx * X;
+                // sparse_copy_B(colB + kx * X, csb, X);
 
                 // kC: kernel size block of C: (U,V)
                 f64rw kC = C + ku * U + kv * V * K;
@@ -413,7 +414,7 @@ void kernel_compute_intern_blocked(f64ro A, f64ro B, f64rw C, dim K) {
             }
         }
     }
-    free_csb(csb);
+    free_csb(ccb);
 }
 
 void kernel_compute_intern_ld(f64ro A, dim lda, f64ro B, dim ldb, f64rw C, dim ldc, dim K) {
@@ -444,7 +445,7 @@ void kernel_compute_intern_ld(f64ro A, dim lda, f64ro B, dim ldb, f64rw C, dim l
 }
 
 void kernel_compute_intern_master(f64ro A, f64ro B, f64rw C, dim K) {
-    dim D = 256;
+    dim D = 1024;
 
     f64ro A00 = A;
     f64ro A01 = A + D;
@@ -461,19 +462,20 @@ void kernel_compute_intern_master(f64ro A, f64ro B, f64rw C, dim K) {
     f64rw C10 = C + D * K;
     f64rw C11 = C + D + D * K;
 
-    kernel_compute_intern_ld(A00, K, B00, K, C00, K, 512);
+    // kernel_compute_intern(A00, B00, C00, K);
+    // kernel_compute_intern_ld(A00, K, B00, K, C00, K, K);
 
-    // kernel_compute_intern_ld(A00, K, B00, K, C00, K, D);
-    // kernel_compute_intern_ld(A01, K, B10, K, C00, K, D);
+    kernel_compute_intern_ld(A00, K, B00, K, C00, K, D);
+    kernel_compute_intern_ld(A01, K, B10, K, C00, K, D);
 
-    // kernel_compute_intern_ld(A00, K, B01, K, C01, K, D);
-    // kernel_compute_intern_ld(A01, K, B11, K, C01, K, D);
+    kernel_compute_intern_ld(A00, K, B01, K, C01, K, D);
+    kernel_compute_intern_ld(A01, K, B11, K, C01, K, D);
 
-    // kernel_compute_intern_ld(A10, K, B00, K, C10, K, D);
-    // kernel_compute_intern_ld(A11, K, B10, K, C10, K, D);
+    kernel_compute_intern_ld(A10, K, B00, K, C10, K, D);
+    kernel_compute_intern_ld(A11, K, B10, K, C10, K, D);
 
-    // kernel_compute_intern_ld(A10, K, B01, K, C11, K, D);
-    // kernel_compute_intern_ld(A11, K, B11, K, C11, K, D);
+    kernel_compute_intern_ld(A10, K, B01, K, C11, K, D);
+    kernel_compute_intern_ld(A11, K, B11, K, C11, K, D);
 }
 
 
@@ -489,10 +491,10 @@ PyObject* kernel_compute(PyObject* self, PyObject* args) {
     const size_t K = gemm_args->K;
 
 
-    // kernel_compute_intern(A, B, C, K);
+    kernel_compute_intern(A, B, C, K);
     // kernel_compute_intern_blocked(A, B, C, K);
     // kernel_compute_intern_ld(A, K, B, K, C, K, K);
-    kernel_compute_intern_master(A, B, C, K);
+    // kernel_compute_intern_master(A, B, C, K);
 
     Py_INCREF(Py_None);
     return Py_None;

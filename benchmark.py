@@ -34,7 +34,7 @@ def main():
         df = None
 
     warmups = [100, 50, 25, 10, 5, 3]
-    warmups = [15]
+    # warmups = [5]
 
     def get_warmup(i):
         if i >= len(warmups):
@@ -47,7 +47,7 @@ def main():
     # sizes = [512]
     # sizes = [2048]
     sizes = [128, 256, 512, 1024] + list(range(1024 + 512, 4096 + 1, 512))
-    sizes = [1024]
+    # sizes = [2048]
     runs = []
     try:
         for version_name in version_names:
