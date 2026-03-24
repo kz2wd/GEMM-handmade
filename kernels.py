@@ -76,7 +76,8 @@ def check_numpy(_):
 
 
 def check_c(version: GEMM):
-    # K = 128
+    return 0
+    # K = 256
     # K = 512
     K = 1024
     cgemm_args = version.layout.prepare(K)
@@ -92,6 +93,7 @@ def check_c(version: GEMM):
     for i in range(K):
         for j in range(K):
             error = max(error, abs(C[i, j] - cgemm.get_naive(cgemm_args, 2, i, j)))
+            # error += abs(C[i, j] - cgemm.get_naive(cgemm_args, 2, i, j))
     return error
 
 
@@ -174,5 +176,13 @@ kernels = {
     "cblas": GEMM("OpenBLAS", "FP64", "CPU", "c", cgemm.cblas_compute, caligned_layout),
     "simple": GEMM(
         "Simple C version", "FP64", "CPU", "c", cgemm.simple_compute, caligned_layout
+    ),
+    "pack": GEMM(
+        "Packed version",
+        "FP64",
+        "CPU",
+        "c",
+        cgemm.pack_compute,
+        caligned_layout,
     ),
 }

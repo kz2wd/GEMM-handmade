@@ -20,10 +20,11 @@ def main():
         # 'numpy_FP32',
         #   'loop_kmn',
         # 'block_c',
-        "kernel_c",
+        # "kernel_c",
         #'naive_acc_compute',
         # "cblas",
         # "simple",
+        "pack"
     ]
 
     conn = sqlite3.connect("benchmarks.db")
@@ -46,8 +47,9 @@ def main():
     max_data = 1000
     # sizes = [512]
     # sizes = [2048]
-    sizes = [128, 256, 512, 1024] + list(range(1024 + 512, 4096 + 1, 512))
+    sizes = [256, 512, 1024] + list(range(1024 + 512, 4096 + 1, 512))
     # sizes = [2048]
+    # sizes = [256, 512, 1024] + list(range(1024 + 512, 2048 + 1, 512))
     runs = []
     try:
         for version_name in version_names:

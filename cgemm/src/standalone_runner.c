@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "cgemm_kernel.h"
+#include "cgemm_pack.h"
 #include "cgemm_args.h"
 
 #define prefetch_D 64
@@ -12,7 +13,7 @@
 
 int main(int argc, char** argv){
 
-    size_t K = 4096 + 2048;
+    size_t K = 4096;
 
     double* A = (double *) aligned_alloc(64, sizeof(double) * K * K);
     double* B = (double *) aligned_alloc(64, sizeof(double) * K * K);
@@ -22,7 +23,8 @@ int main(int argc, char** argv){
     init_mat(B, K);
     memset(C, 0, sizeof(double) * K * K);
 
-    kernel_compute_intern(A, B, C, K);
+    // kernel_compute_intern(A, B, C, K);
+    pack_compute_intern(A, K, B, K, C, K, K);
 
     return EXIT_SUCCESS;
 }

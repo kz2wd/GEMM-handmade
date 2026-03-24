@@ -90,7 +90,7 @@ def plot_flops_cpu():
 
 
 def plot_smaller():
-    versions_to_plot = ["kernel_c", "cblas"]
+    versions_to_plot = ["kernel_c", "cblas", "pack"]
     df = fetch_df(versions_to_plot)
     df["GFLOPS"] = df.apply(
         lambda row: (2 * row["size"] ** 3) / row["time"] * 1e-9, axis=1
