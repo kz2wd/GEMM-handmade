@@ -16,9 +16,9 @@
 // Prefetech distance
 #define prefetch_D 64
 
-#define O 128
-#define Q 128
-#define P 128
+#define O 256
+#define Q 32
+#define P 256
 
 #define U 8
 #define V 4
@@ -47,8 +47,8 @@ static void packB(f64rw pb, f64ro sB, dim ldb) {
     dim Ud = sizeof(double) * U;
     for (int pu = 0; pu < PU; ++pu) {
         for (int q = 0; q < Q; ++q) {
-            // pu + 1 prefetch so that Q is used as prefetch distance
-             __builtin_prefetch(sB + (pu + 1) * U + q * ldb, 0, 1);
+            // pu + X prefetch so that X * Q is used as prefetch distance
+            // __builtin_prefetch(sB + (pu + 4) * U + q * ldb, 0, 0); // I think it is useless ...
             memcpy(pb + pu * U * Q + q * U, sB + pu * U + q * ldb, Ud);
         }
     }

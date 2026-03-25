@@ -4,6 +4,7 @@
 #include "cgemm_kernel.h"
 #include "cgemm_pack.h"
 #include "cgemm_args.h"
+#include "cgemm_blas.h"
 
 #define prefetch_D 64
 #define ALIGNEMENT 64
@@ -25,6 +26,7 @@ int main(int argc, char** argv){
 
     // kernel_compute_intern(A, B, C, K);
     pack_compute_intern(A, K, B, K, C, K, K);
+    // cblas_compute_intern(A, B, C, K);
 
     return EXIT_SUCCESS;
 }
